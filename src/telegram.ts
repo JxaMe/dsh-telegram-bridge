@@ -163,7 +163,7 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
     await ctx.answerCallbackQuery();
   });
 
-  bot.callbackQuery(/^model:/, async (ctx) => {
+  bot.callbackQuery(/^model\|/, async (ctx) => {
     const parts = decodeData(ctx.callbackQuery.data);
     if (parts.length < 3) {
       await ctx.answerCallbackQuery('无效的模型数据');
@@ -209,7 +209,7 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
     await ctx.answerCallbackQuery();
   });
 
-  bot.callbackQuery(/^effort:/, async (ctx) => {
+  bot.callbackQuery(/^effort\|/, async (ctx) => {
     const parts = decodeData(ctx.callbackQuery.data);
     if (parts.length < 4) {
       await ctx.answerCallbackQuery('无效的思考强度数据');
@@ -243,7 +243,7 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
     await ctx.answerCallbackQuery();
   });
 
-  bot.callbackQuery(/^preset:/, async (ctx) => {
+  bot.callbackQuery(/^preset\|/, async (ctx) => {
     const parts = decodeData(ctx.callbackQuery.data);
     if (parts.length < 2) {
       await ctx.answerCallbackQuery('无效的 preset 数据');
