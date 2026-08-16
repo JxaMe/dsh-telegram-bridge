@@ -1,56 +1,56 @@
 # dsh-telegram-bridge
 
-Bridge Telegram private chats to [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (`dsh`) agent sessions.
+将 Telegram 私聊与 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（`dsh`）Agent 会话连接起来的桥接插件。
 
-Talk to your dsh agent directly from Telegram: send a message, get an agent reply, switch models, change reasoning effort, select an agent preset, manage context, and more — all from a private chat.
+直接在 Telegram 里和你的 dsh Agent 对话：发送消息、接收回复、切换模型、调整思考强度、选择 Agent preset、管理上下文——全部在私聊中完成。
 
-## Features
+## 功能特性
 
-- 💬 **Private chat bridge** — one-on-one conversation between Telegram and a dsh agent session.
-- 🧠 **Model & reasoning controls** — dynamically list and switch models and reasoning efforts.
-- 🎛️ **Agent preset switching** — choose from available dsh presets (blank sessions only).
-- 📋 **Inline command menu** — quick buttons for new chat, cancel, status, and settings.
-- ⏳ **Typing / waiting indicator** — shows `🌊 Deep diving...` while the agent is thinking.
-- 🧵 **Queue & cancel** — messages are queued; `/cancel` stops the current task and clears the queue.
-- 🗜️ **Context compaction** — `/compact` reduces conversation history when it gets long.
-- ♻️ **Persistent state** — chat → session mapping and user settings survive dsh restarts.
-- 🌐 **Proxy support** — automatically uses `HTTPS_PROXY` / `HTTP_PROXY` when available.
-- 🛡️ **Owner-only** — only the configured Telegram user ID can use the bot.
+- 💬 **私聊桥接**：Telegram 与 dsh Agent 会话的一对一对话。
+- 🧠 **模型与思考强度控制**：动态列出并切换模型和思考强度。
+- 🎛️ **Agent preset 切换**：选择可用的 dsh preset（仅限空白会话）。
+- 📋 **内联命令菜单**：新对话、取消、状态、设置等快捷按钮。
+- ⏳ **等待提示**：Agent 思考时显示 `🌊 Deep diving...`。
+- 🧵 **队列与取消**：消息按顺序排队；`/cancel` 取消当前任务并清空队列。
+- 🗜️ **上下文压缩**：`/compact` 压缩过长的对话历史。
+- ♻️ **状态持久化**：chat → session 映射和用户设置会在 dsh 重启后保留。
+- 🌐 **代理支持**：自动使用 `HTTPS_PROXY` / `HTTP_PROXY`。
+- 🛡️ **仅限 Owner**：只有配置的 Telegram 用户 ID 可以使用。
 
-## How It Works
+## 工作原理
 
 ```text
 Telegram Bot API
-      │ long polling (grammY)
+      │ 长轮询（grammY）
       ▼
-dsh-telegram-bridge (dsh profile plugin)
+dsh-telegram-bridge（dsh profile 插件）
       │
-      ├── dsh apiProxy (sessions, models, presets)
-      ├── dsh agents (cancel)
-      └── dsh session events (assistant replies)
+      ├── dsh apiProxy（session、模型、preset）
+      ├── dsh agents（取消任务）
+      └── dsh session 事件（Agent 回复）
       │
       ▼
-dsh agent session
+dsh Agent 会话
 ```
 
-The plugin runs inside a dsh profile (typically `web`) and uses dsh's native services — no separate server or webhook required.
+插件运行在 dsh profile 内部（通常是 `web`），直接使用 dsh 原生服务，不需要独立服务器或 Webhook。
 
-## Requirements
+## 环境要求
 
-- DeepSeek Harness (`dsh`) installed
-- `pnpm` available (used by the dsh plugin manager)
-- A Telegram bot token from [@BotFather](https://t.me/BotFather)
-- Your Telegram user ID (e.g. from [@userinfobot](https://t.me/userinfobot))
+- 已安装 DeepSeek Harness（`dsh`）
+- 已安装 `pnpm`（dsh 插件管理器依赖）
+- 来自 [@BotFather](https://t.me/BotFather) 的 Telegram Bot Token
+- 你的 Telegram 数字 User ID（可通过 [@userinfobot](https://t.me/userinfobot) 查询）
 
-## Installation
+## 安装
 
-Once the repository is public, install it with:
+仓库公开后，可以通过以下命令安装：
 
 ```bash
-dsh plugin --profile web add github:<your-github-username>/dsh-telegram-bridge
+dsh plugin --profile web add github:<你的GitHub用户名>/dsh-telegram-bridge
 ```
 
-For local development:
+本地开发安装：
 
 ```bash
 cd ~/Projects/dsh-telegram-bridge
@@ -59,17 +59,17 @@ pnpm build
 dsh plugin --profile web add /home/los/Projects/dsh-telegram-bridge
 ```
 
-Verify the plugin is registered:
+验证插件是否注册成功：
 
 ```bash
 dsh --profile web --dump-config | grep dsh-telegram-bridge
 ```
 
-Then restart `dsh web`.
+然后重启 `dsh web`。
 
-## Configuration
+## 配置
 
-Create/edit `~/.dsh/dsh-telegram-bridge/config.json`:
+创建或编辑 `~/.dsh/dsh-telegram-bridge/config.json`：
 
 ```json
 {
@@ -79,39 +79,39 @@ Create/edit `~/.dsh/dsh-telegram-bridge/config.json`:
 }
 ```
 
-| Field | Description |
+| 字段 | 说明 |
 |---|---|
-| `botToken` | Telegram bot token from @BotFather |
-| `ownerId` | Your Telegram numeric user ID |
-| `projectRoot` | Working directory used for new dsh sessions |
+| `botToken` | 来自 @BotFather 的 Telegram Bot Token |
+| `ownerId` | 你的 Telegram 数字 User ID |
+| `projectRoot` | 新 dsh session 使用的工作目录 |
 
-> The plugin creates an example config file automatically on first start.
+> 插件首次启动时会自动生成示例配置文件。
 
-## Usage
+## 使用方法
 
-Open a private chat with your bot and send `/start`.
+打开与 bot 的私聊，发送 `/start`。
 
-### Commands
+### 命令
 
-| Command | Description |
+| 命令 | 说明 |
 |---|---|
-| `/start` | Show the main menu |
-| `/new` | Start a new conversation (requires confirmation) |
-| `/cancel` | Cancel the current task and clear the queue |
-| `/status` | Show session, queue, model, and preset status |
-| `/menu` | Open the settings panel |
-| `/compact` | Compact conversation history |
-| `/help` | Show command help |
+| `/start` | 显示主菜单 |
+| `/new` | 开始新对话（需要确认） |
+| `/cancel` | 取消当前任务并清空队列 |
+| `/status` | 查看 session、队列、模型和 preset 状态 |
+| `/menu` | 打开设置面板 |
+| `/compact` | 压缩对话历史 |
+| `/help` | 显示命令帮助 |
 
-### Settings Panel
+### 设置面板
 
-Use `/menu` to:
+使用 `/menu` 可以：
 
-- Switch **model**
-- Switch **reasoning effort**
-- Switch **Agent preset** (only available on blank/new sessions)
+- 切换**模型**
+- 切换**思考强度**
+- 切换 **Agent preset**（仅限空白/新会话）
 
-## Development
+## 开发
 
 ```bash
 pnpm install
@@ -119,31 +119,31 @@ pnpm typecheck
 pnpm build
 ```
 
-### Project Structure
+### 项目结构
 
 ```text
 dsh-telegram-bridge/
 ├── src/
-│   ├── index.ts          # dsh plugin entry
-│   ├── telegram.ts       # Telegram bot & handlers
-│   ├── session.ts        # dsh session management
-│   ├── queue.ts          # message queue
-│   ├── forwarder.ts      # assistant reply forwarding
-│   ├── settings.ts       # model/effort/preset settings
-│   ├── state.ts          # persistent state
-│   ├── config.ts         # configuration loading
-│   ├── proxy-fetch.ts    # Telegram API proxy support
+│   ├── index.ts          # dsh 插件入口
+│   ├── telegram.ts       # Telegram bot 与处理器
+│   ├── session.ts        # dsh session 管理
+│   ├── queue.ts          # 消息队列
+│   ├── forwarder.ts      # Agent 回复转发
+│   ├── settings.ts       # 模型/思考强度/preset 设置
+│   ├── state.ts          # 持久化状态
+│   ├── config.ts         # 配置加载
+│   ├── proxy-fetch.ts    # Telegram API 代理支持
 │   └── ...
 ├── extensions/dsh/       # dsh bundle patch
-└── docs/aegis/           # Aegis design & plan docs
+└── docs/aegis/           # Aegis 设计与计划文档
 ```
 
 ## Roadmap
 
-- [ ] V2: Full settings panel in the dsh Web UI
-- [ ] Better message formatting (safe HTML / code blocks)
-- [ ] Queue limits and per-message waiting indicators
-- [ ] Automated tests
+- [ ] V2：在 dsh Web UI 中增加完整设置面板
+- [ ] 更完善的消息格式（安全 HTML / 代码块）
+- [ ] 队列上限与每条消息独立等待提示
+- [ ] 自动化测试
 
 ## License
 
