@@ -253,3 +253,45 @@ dsh agent session
 - New host adapter surface: dsh profile plugin bundle.
 - New persistent state files under `~/.dsh/dsh-telegram-bridge/`.
 - Dependency direction: plugin depends on dsh public services (`apiProxy`, `agents`, `compaction`), not on dsh internals.
+
+## 14. V2 Roadmap: Full Settings Panel
+
+### 14.1 Goal
+
+Add a full settings panel in the dsh Web UI so users can manage plugin-level and default session settings without editing `config.json` manually.
+
+### 14.2 Settings to Include
+
+| Setting | Description | Default |
+|---|---|---|
+| Bot Token | Telegram bot token | current config value |
+| Owner ID | Allowed Telegram user ID | current config value |
+| Project Root | Default working directory for new dsh sessions | current config value |
+| Proxy Enabled | Whether to route Telegram API through a proxy | auto-detect from env |
+| Proxy URL | Proxy address used when enabled | `http://127.0.0.1:7890` |
+| Default Model | Default model for new chats | dsh default |
+| Default Reasoning Effort | Default reasoning effort for new chats | dsh default |
+| Default Agent Preset | Default preset for new chats | dsh default |
+| Error Display Mode | `raw` or `friendly` | `raw` |
+| HTML Formatting | Enable Telegram HTML rendering | `true` |
+| Typing Indicator | Send typing/processing status | `true` |
+| Queue Limit | Max queued messages per chat | unlimited |
+| Debug Logging | Enable verbose plugin logs | `false` |
+
+### 14.3 UI Requirements
+
+- Settings panel should be accessible from dsh Web UI settings menu.
+- Changes should persist to the plugin config/state files.
+- Some settings (Bot Token, Owner ID) are sensitive and should be clearly marked.
+- Proxy setting should not require a dsh restart; it should take effect on next bot reconnect or plugin reload.
+
+### 14.4 Non-Goals for V2
+
+- No multi-user management.
+- No group chat support.
+- No media support unless explicitly added later.
+
+### 14.5 ADR Signals
+
+- New client-side dsh Web UI slot/plugin surface.
+- New settings persistence schema may require migration from `config.json` to a structured settings store.
