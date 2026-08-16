@@ -10,10 +10,10 @@ export class SettingsManager {
 
   async getModels(sessionId: string): Promise<DshSessionModels> {
     const res = await this.api.sessions.models({ payload: { sessionId } });
-    if (!res.ok) {
-      throw new Error(`models failed: ${JSON.stringify(res.error)}`);
+    if (!res.result.ok) {
+      throw new Error(`models failed: ${JSON.stringify(res.result.error)}`);
     }
-    return res.value;
+    return res.result.value;
   }
 
   async selectModel(
@@ -31,8 +31,8 @@ export class SettingsManager {
         ...(reasoningEffort ? { reasoningEffort } : {}),
       },
     });
-    if (!res.ok) {
-      throw new Error(`selectModel failed: ${JSON.stringify(res.error)}`);
+    if (!res.result.ok) {
+      throw new Error(`selectModel failed: ${JSON.stringify(res.result.error)}`);
     }
     const settings: ChatSettings = this.state.getChatSettings(chatId);
     settings.provider = provider;
@@ -43,21 +43,21 @@ export class SettingsManager {
 
   async listPresets() {
     const res = await this.api.agentPresets.list({ payload: {} });
-    if (!res.ok) {
-      throw new Error(`presets failed: ${JSON.stringify(res.error)}`);
+    if (!res.result.ok) {
+      throw new Error(`presets failed: ${JSON.stringify(res.result.error)}`);
     }
-    return res.value.presets;
+    return res.result.value.presets;
   }
 
   async selectPreset(chatId: number, sessionId: string, agentPreset: string): Promise<void> {
     const res = await this.api.agentPresets.select({
       payload: { sessionId, agentPreset },
     });
-    if (!res.ok) {
-      if (res.error.code === 'agent-preset-locked') {
+    if (!res.result.ok) {
+      if (res.result.error.code === 'agent-preset-locked') {
         throw new Error('当前会话已有历史，请先使用 /new 开始新对话后再切换 preset');
       }
-      throw new Error(`selectPreset failed: ${JSON.stringify(res.error)}`);
+      throw new Error(`selectPreset failed: ${JSON.stringify(res.result.error)}`);
     }
     const settings: ChatSettings = this.state.getChatSettings(chatId);
     settings.agentPreset = agentPreset;

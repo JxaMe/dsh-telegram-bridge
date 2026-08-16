@@ -48,8 +48,8 @@ export class QueueManager {
               content: [{ type: 'text', text: item.text }],
             },
           });
-          if (!res.ok) {
-            throw new Error(`prompt failed: ${JSON.stringify(res.error)}`);
+          if (!res.result.ok) {
+            throw new Error(`prompt failed: ${JSON.stringify(res.result.error)}`);
           }
         } catch (error) {
           this.onError?.(chatId, error);

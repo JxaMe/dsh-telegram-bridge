@@ -24,10 +24,10 @@ export class SessionManager {
         agentPreset: settings.agentPreset,
       },
     });
-    if (!res.ok) {
-      throw new Error(`create session failed: ${JSON.stringify(res.error)}`);
+    if (!res.result.ok) {
+      throw new Error(`create session failed: ${JSON.stringify(res.result.error)}`);
     }
-    const sessionId = res.value.sessionId;
+    const sessionId = res.result.value.sessionId;
     this.state.setChatState(chatId, { sessionId, createdAt: Date.now() });
     return sessionId;
   }

@@ -348,8 +348,8 @@ async function runCompact(
       content: [{ type: 'text', text: '/compact' }],
     },
   });
-  if (!res.ok) {
-    await send(chatId, `压缩失败：${JSON.stringify(res.error)}`);
+  if (!res.result.ok) {
+    await send(chatId, `压缩失败：${JSON.stringify(res.result.error)}`);
     return;
   }
   await send(chatId, '已请求压缩。');

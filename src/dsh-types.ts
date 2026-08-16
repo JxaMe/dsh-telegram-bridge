@@ -20,6 +20,11 @@ export interface DshResultErr {
 
 export type DshResult<T> = DshResultOk<T> | DshResultErr;
 
+export interface DshRpcResponse<T> {
+  rpcId?: string;
+  result: DshResult<T>;
+}
+
 export interface DshTextContent {
   type: 'text';
   text: string;
@@ -64,17 +69,17 @@ export interface DshApi {
         cwd?: string;
         agentPreset?: string;
       };
-    }): Promise<DshResult<{ sessionId: string }>>;
+    }): Promise<DshRpcResponse<{ sessionId: string }>>;
     prompt(req: {
       payload: {
         sessionId: string;
         mode: 'queue' | 'steer';
         content: DshTextContent[];
       };
-    }): Promise<DshResult<{ accepted: true; command?: { kind: 'success'; text?: string } }>>;
+    }): Promise<DshRpcResponse<{ accepted: true; command?: { kind: 'success'; text?: string } }>>;
     models(req: {
       payload: { sessionId: string };
-    }): Promise<DshResult<DshSessionModels>>;
+    }): Promise<DshRpcResponse<DshSessionModels>>;
     selectModel(req: {
       payload: {
         sessionId: string;
@@ -82,16 +87,16 @@ export interface DshApi {
         model: string;
         reasoningEffort?: string;
       };
-    }): Promise<DshResult<{ selected: unknown }>>;
+    }): Promise<DshRpcResponse<{ selected: unknown }>>;
   };
   agentPresets: {
-    list(req: { payload: {} }): Promise<DshResult<{ presets: DshPresetEntry[] }>>;
+    list(req: { payload: {} }): Promise<DshRpcResponse<{ presets: DshPresetEntry[] }>>;
     select(req: {
       payload: {
         sessionId: string;
         agentPreset: string;
       };
-    }): Promise<DshResult<{ agentPreset: string }>>;
+    }): Promise<DshRpcResponse<{ agentPreset: string }>>;
   };
 }
 
