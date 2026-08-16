@@ -8,13 +8,13 @@ import { ProxyAgent, fetch as undiciFetch } from 'undici';
 export function createProxiedFetch(proxyUrl: string): typeof fetch {
   const dispatcher = new ProxyAgent(proxyUrl);
 
-  return (async (input: any, init?: any) => {
+  return (async (input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) => {
     const signal = normalizeSignal(init?.signal);
-    return undiciFetch(input, { ...init, signal, dispatcher });
+    return undiciFetch(input as Parameters<typeof undiciFetch>[0], { ...init, signal, dispatcher } as Parameters<typeof undiciFetch>[1]);
   }) as unknown as typeof fetch;
 }
 
-function normalizeSignal(signal: any): AbortSignal | undefined {
+function normalizeSignal(signal: AbortSignal | null | undefined): AbortSignal | undefined {
   if (!signal) return undefined;
   if (typeof AbortSignal !== 'undefined' && signal instanceof AbortSignal) {
     return signal;

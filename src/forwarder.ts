@@ -14,14 +14,17 @@ export class EventForwarder {
   ) {}
 
   start(): void {
-    this.ctx.on('session/event', (session: any, event: any) => {
-      if (event?.type !== 'assistant/message') return;
-      const sessionId: string | undefined = session?.id;
+    this.ctx.on('session/event', (session: unknown, event: unknown) => {
+      const evt = event as DshSessionEventEnvelope;
+      if (evt?.type !== 'assistant/message') return;
+      const sessionRecord = session as { id?: unknown } | null;
+      const sessionId = typeof sessionRecord?.id === 'string' ? sessionRecord.id : undefined;
       if (!sessionId) return;
       const chatId = this.findChatId(sessionId);
       if (chatId === undefined) return;
-      const text = extractText(event.data?.message?.content ?? event.data?.content);
-      this.state.addAssistantMessage(chatId, event.data?.usage);
+      const data = evt.data ?? {};
+      const text = extractText(data.message?.content ?? data.content);
+      this.state.addAssistantMessage(chatId, data.usage);
       if (!text) return;
       void this.sendToTelegram(chatId, text);
     });
@@ -52,13 +55,41 @@ export class EventForwarder {
   }
 }
 
+interface DshSessionEventEnvelope {
+  type?: string;
+  data?: DshEventData;
+}
+
+interface DshEventData {
+  message?: { content?: unknown };
+  content?: unknown;
+  usage?: DshTokenUsage;
+}
+
+interface DshTokenUsage {
+  inputTokens?: number;
+  outputTokens?: number;
+  cacheReadTokens?: number;
+  cacheWriteTokens?: number;
+}
+
+interface DshTextBlock {
+  type?: string;
+  text?: unknown;
+}
+
 function extractText(content: unknown): string {
   if (!Array.isArray(content)) return '';
   return content
-    .filter((block: any) => block?.type === 'text')
-    .map((block: any) => String(block.text ?? ''))
+    .filter(isTextBlock)
+    .map((block) => String(block.text ?? ''))
     .join('\n')
     .trim();
+}
+
+function isTextBlock(block: unknown): block is DshTextBlock {
+  if (typeof block !== 'object' || block === null) return false;
+  return (block as Record<string, unknown>).type === 'text';
 }
 
 interface TextBlock {
@@ -226,12 +257,15 @@ function chunkBlocks(blocks: TextBlock[], limit: number): string[] {
 }
 
 
-function renderDshUi(data: any): string {
+function renderDshUi(data: unknown): string {
+  const record = asRecord(data);
+  if (!record) return '';
   const parts: string[] = [];
-  if (typeof data?.title === 'string' && data.title.trim()) {
-    parts.push(`<b>${escapeHtml(data.title)}</b>`);
+  const title = record.title;
+  if (typeof title === 'string' && title.trim()) {
+    parts.push(`<b>${escapeHtml(title)}</b>`);
   }
-  const items = Array.isArray(data?.items) ? data.items : [];
+  const items = Array.isArray(record.items) ? record.items : [];
   for (const item of items) {
     const rendered = renderDshUiItem(item);
     if (rendered) parts.push(rendered);
@@ -239,31 +273,36 @@ function renderDshUi(data: any): string {
   return parts.join('\n\n');
 }
 
-function renderDshUiItem(item: any): string {
-  if (!item || typeof item !== 'object') return '';
-  switch (item.type) {
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return typeof value === 'object' && value !== null ? value as Record<string, unknown> : null;
+}
+
+function renderDshUiItem(item: unknown): string {
+  const record = asRecord(item);
+  if (!record) return '';
+  switch (record.type) {
     case 'keyvalue': {
-      const pairs = Array.isArray(item.pairs) ? item.pairs : [];
+      const pairs = Array.isArray(record.pairs) ? record.pairs : [];
       return pairs
-        .filter((pair: any) => pair && typeof pair === 'object')
-        .map((pair: any) => `<b>${escapeHtml(String(pair.key ?? ''))}</b>: ${escapeHtml(String(pair.value ?? ''))}`)
+        .filter((pair): pair is Record<string, unknown> => asRecord(pair) !== null)
+        .map((pair) => `<b>${escapeHtml(String(pair.key ?? ''))}</b>: ${escapeHtml(String(pair.value ?? ''))}`)
         .join('\n');
     }
     case 'callout': {
-      const icon = calloutIcon(item.tone);
-      const title = typeof item.title === 'string' && item.title.trim() ? `${icon} ${item.title}` : icon;
-      const content = typeof item.content === 'string' ? item.content : '';
+      const icon = calloutIcon(record.tone);
+      const title = typeof record.title === 'string' && record.title.trim() ? `${icon} ${record.title}` : icon;
+      const content = typeof record.content === 'string' ? record.content : '';
       return `<b>${escapeHtml(title)}</b>\n${escapeHtml(content)}`;
     }
     case 'text':
-      return escapeHtml(typeof item.content === 'string' ? item.content : typeof item.text === 'string' ? item.text : '');
+      return escapeHtml(typeof record.content === 'string' ? record.content : typeof record.text === 'string' ? record.text : '');
     case 'list': {
-      const values = Array.isArray(item.items) ? item.items : [];
-      return values.map((value: any) => `• ${escapeHtml(String(value))}`).join('\n');
+      const values = Array.isArray(record.items) ? record.items : [];
+      return values.map((value) => `• ${escapeHtml(String(value))}`).join('\n');
     }
     case 'steps': {
-      const steps = Array.isArray(item.items) ? item.items : [];
-      return steps.map((step: any, index: number) => `${index + 1}. ${escapeHtml(String(step))}`).join('\n');
+      const steps = Array.isArray(record.items) ? record.items : [];
+      return steps.map((step, index) => `${index + 1}. ${escapeHtml(String(step))}`).join('\n');
     }
     default:
       return '';

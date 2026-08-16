@@ -123,7 +123,7 @@ export interface DshContext {
     warn(message: string): void;
     info?(message: string): void;
   };
-  on(event: string, listener: (...args: any[]) => void): void;
+  on(event: string, listener: (session: unknown, event: unknown) => void): void;
   get<T = unknown>(name: string): T | undefined;
   effect(fn: () => void | (() => void)): void;
 }
