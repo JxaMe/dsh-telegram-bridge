@@ -1,0 +1,3 @@
+- insert:
+    - id: dsh-telegram-bridge
+      name: dsh-telegram-bridge/lib/index.js
