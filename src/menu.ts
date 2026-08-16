@@ -1,5 +1,6 @@
 import { InlineKeyboard } from 'grammy';
 import type { DshPresetEntry, DshSessionModels } from './dsh-types.js';
+import { encodeData } from './callback.js';
 import type { ChatSettings } from './types.js';
 
 const MODEL_PAGE_SIZE = 8;
@@ -116,8 +117,4 @@ export function presetsKeyboard(
     text: `选择 Agent preset${currentPreset ? `（当前：${currentPreset}）` : ''}`,
     keyboard,
   };
-}
-
-function encodeData(parts: string[]): string {
-  return parts.map((part) => encodeURIComponent(part)).join('|');
 }

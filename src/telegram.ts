@@ -4,6 +4,7 @@ import type { DshApi, DshContext } from './dsh-types.js';
 import { EventForwarder } from './forwarder.js';
 import { PendingStatus } from './pending-status.js';
 import { createRpcId } from './rpc.js';
+import { decodeData, encodeData } from './callback.js';
 import { commandMenuKeyboard, effortsKeyboard, mainMenuKeyboard, modelsPageKeyboard, presetsKeyboard, settingsKeyboard } from './menu.js';
 import { QueueManager } from './queue.js';
 import { SessionManager } from './session.js';
@@ -473,13 +474,4 @@ async function setupCommandMenu(bot: Bot, ownerId: number): Promise<void> {
   } catch (error) {
     console.error('Failed to setup command menu', error);
   }
-}
-
-
-function encodeData(parts: string[]): string {
-  return parts.map((part) => encodeURIComponent(part)).join('|');
-}
-
-function decodeData(data: string): string[] {
-  return data.split('|').map((part) => decodeURIComponent(part));
 }

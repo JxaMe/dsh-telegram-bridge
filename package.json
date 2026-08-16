@@ -11,7 +11,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "prepare": "pnpm build"
+    "prepare": "pnpm build",
+    "test": "pnpm build && node --test test/*.test.mjs"
   },
   "dependencies": {
     "grammy": "^1.30.0",
