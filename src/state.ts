@@ -1,6 +1,6 @@
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import type { ChatSettings, ChatState, PersistedSettings, PersistedState } from './types.js';
+import type { ChatSettings, ChatState, ChatStats, PersistedSettings, PersistedState } from './types.js';
 
 export class StateStore {
   private statePath: string;
@@ -13,7 +13,7 @@ export class StateStore {
     mkdirSync(dataDir, { recursive: true });
     this.statePath = path.join(dataDir, 'state.json');
     this.settingsPath = path.join(dataDir, 'settings.json');
-    this.state = { chats: {} };
+    this.state = { chats: {}, stats: {} };
     this.settings = { chats: {} };
   }
 
@@ -52,6 +52,56 @@ export class StateStore {
     return value ? { ...value } : {};
   }
 
+  getChatStats(chatId: number): ChatStats {
+    const all = this.loadState();
+    return all.stats?.[String(chatId)] ?? {
+      userMessages: 0,
+      assistantMessages: 0,
+      inputTokens: 0,
+      outputTokens: 0,
+    };
+  }
+
+  incrementUserMessage(chatId: number): void {
+    const all = this.loadState();
+    const key = String(chatId);
+    const stats = all.stats?.[key] ?? {
+      userMessages: 0,
+      assistantMessages: 0,
+      inputTokens: 0,
+      outputTokens: 0,
+    };
+    stats.userMessages += 1;
+    all.stats ??= {};
+    all.stats[key] = stats;
+    this.writeJson(this.statePath, all);
+  }
+
+  addAssistantMessage(chatId: number, usage?: { inputTokens?: number; outputTokens?: number; cacheReadTokens?: number; cacheWriteTokens?: number }): void {
+    const all = this.loadState();
+    const key = String(chatId);
+    const stats = all.stats?.[key] ?? {
+      userMessages: 0,
+      assistantMessages: 0,
+      inputTokens: 0,
+      outputTokens: 0,
+    };
+    stats.assistantMessages += 1;
+    if (usage) {
+      stats.inputTokens += usage.inputTokens ?? 0;
+      stats.outputTokens += usage.outputTokens ?? 0;
+      if (usage.cacheReadTokens !== undefined) {
+        stats.cacheReadTokens = (stats.cacheReadTokens ?? 0) + usage.cacheReadTokens;
+      }
+      if (usage.cacheWriteTokens !== undefined) {
+        stats.cacheWriteTokens = (stats.cacheWriteTokens ?? 0) + usage.cacheWriteTokens;
+      }
+    }
+    all.stats ??= {};
+    all.stats[key] = stats;
+    this.writeJson(this.statePath, all);
+  }
+
   setChatSettings(chatId: number, settings: ChatSettings): void {
     const all = this.loadSettings();
     all.chats[String(chatId)] = settings;
@@ -60,7 +110,7 @@ export class StateStore {
 
   private ensureLoaded(): void {
     if (this.loaded) return;
-    this.state = this.readJson<PersistedState>(this.statePath, { chats: {} });
+    this.state = this.readJson<PersistedState>(this.statePath, { chats: {}, stats: {} });
     this.settings = this.readJson<PersistedSettings>(this.settingsPath, { chats: {} });
     this.loaded = true;
   }

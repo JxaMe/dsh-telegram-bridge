@@ -17,8 +17,18 @@ export interface ChatSettings {
   agentPreset?: string;
 }
 
+export interface ChatStats {
+  userMessages: number;
+  assistantMessages: number;
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens?: number;
+  cacheWriteTokens?: number;
+}
+
 export interface PersistedState {
   chats: Record<string, ChatState>;
+  stats?: Record<string, ChatStats>;
 }
 
 export interface PersistedSettings {

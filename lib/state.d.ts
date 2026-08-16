@@ -1,4 +1,4 @@
-import type { ChatSettings, ChatState, PersistedSettings, PersistedState } from './types.js';
+import type { ChatSettings, ChatState, ChatStats, PersistedSettings, PersistedState } from './types.js';
 export declare class StateStore {
     private statePath;
     private settingsPath;
@@ -13,6 +13,14 @@ export declare class StateStore {
     getChatState(chatId: number): ChatState | undefined;
     setChatState(chatId: number, state: ChatState): void;
     getChatSettings(chatId: number): ChatSettings;
+    getChatStats(chatId: number): ChatStats;
+    incrementUserMessage(chatId: number): void;
+    addAssistantMessage(chatId: number, usage?: {
+        inputTokens?: number;
+        outputTokens?: number;
+        cacheReadTokens?: number;
+        cacheWriteTokens?: number;
+    }): void;
     setChatSettings(chatId: number, settings: ChatSettings): void;
     private ensureLoaded;
     private readJson;

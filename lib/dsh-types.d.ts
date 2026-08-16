@@ -54,6 +54,15 @@ export interface DshPresetEntry {
     broken?: string;
 }
 export interface DshAgentLike {
+    readonly status?: 'idle' | 'running';
+    readonly options?: {
+        provider?: string;
+        model?: string;
+        maxTokens?: number;
+    };
+    readonly session?: {
+        readonly events?: ReadonlyArray<unknown>;
+    };
     cancel(cause: {
         kind: 'user';
     }, options?: {
