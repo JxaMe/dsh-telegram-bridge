@@ -1,5 +1,6 @@
 import type { Bot } from 'grammy';
 import type { DshContext } from './dsh-types.js';
+import type { PendingStatus } from './pending-status.js';
 import type { StateStore } from './state.js';
 
 export class EventForwarder {
@@ -7,6 +8,7 @@ export class EventForwarder {
     private ctx: DshContext,
     private bot: Bot,
     private state: StateStore,
+    private pending: PendingStatus,
   ) {}
 
   start(): void {
@@ -31,6 +33,7 @@ export class EventForwarder {
   }
 
   private async sendToTelegram(chatId: number, text: string): Promise<void> {
+    await this.pending.clear(this.bot, chatId);
     const chunks = splitMessage(text);
     for (const chunk of chunks) {
       try {

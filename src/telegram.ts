@@ -2,6 +2,7 @@ import { Bot, InlineKeyboard } from 'grammy';
 import { createProxiedFetch } from './proxy-fetch.js';
 import type { DshApi, DshContext } from './dsh-types.js';
 import { EventForwarder } from './forwarder.js';
+import { PendingStatus } from './pending-status.js';
 import { createRpcId } from './rpc.js';
 import { mainMenuKeyboard, settingsKeyboard } from './menu.js';
 import { QueueManager } from './queue.js';
@@ -28,16 +29,18 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
       })
     : new Bot(config.botToken);
 
+  const pending = new PendingStatus();
   const sessions = new SessionManager(api, state, config.projectRoot ?? process.cwd());
   const settings = new SettingsManager(api, state);
   const queue = new QueueManager(api, sessions, state, async (chatId, error) => {
     try {
+      await pending.clear(bot, chatId);
       await bot.api.sendMessage(chatId, `处理失败：${error instanceof Error ? error.message : String(error)}`);
     } catch {
       // ignore report failures
     }
   });
-  const forwarder = new EventForwarder(hostCtx, bot, state);
+  const forwarder = new EventForwarder(hostCtx, bot, state, pending);
   forwarder.start();
 
   // Owner-only middleware
@@ -73,6 +76,7 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
   bot.command('cancel', async (ctx) => {
     const chatId = ctx.chat!.id;
     await cancelCurrent(chatId, hostCtx, state, queue);
+    await pending.clear(bot, chatId);
     await ctx.reply('已取消当前任务并清空队列。');
   });
 
@@ -119,6 +123,7 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
   bot.callbackQuery('cancel', async (ctx) => {
     const chatId = ctx.chat!.id;
     await cancelCurrent(chatId, hostCtx, state, queue);
+    await pending.clear(bot, chatId);
     await ctx.answerCallbackQuery('已取消当前任务并清空队列');
   });
 
@@ -262,7 +267,8 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
     const text = ctx.message.text;
     if (text.startsWith('/')) return;
     queue.enqueue(ctx.chat.id, text);
-    await ctx.reply('已收到，处理中...');
+    const sent = await ctx.reply('Deep diving...');
+    pending.set(ctx.chat.id, sent.message_id);
     await ctx.replyWithChatAction('typing');
   });
 
