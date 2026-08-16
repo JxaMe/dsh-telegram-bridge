@@ -267,7 +267,7 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
     const text = ctx.message.text;
     if (text.startsWith('/')) return;
     queue.enqueue(ctx.chat.id, text);
-    const sent = await ctx.reply('Deep diving...');
+    const sent = await ctx.reply('🌊 Deep diving...');
     pending.set(ctx.chat.id, sent.message_id);
     await ctx.replyWithChatAction('typing');
   });
