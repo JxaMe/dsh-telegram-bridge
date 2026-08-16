@@ -13,10 +13,12 @@ Talk to your dsh agent directly from Telegram: send a message, get a reply, swit
 - 💬 **Private chat bridge** — one-on-one conversation between Telegram and a dsh agent session.
 - 🧠 **Model & reasoning controls** — dynamically list and switch models and reasoning efforts.
 - 🎛️ **Agent preset switching** — choose from available dsh presets (blank sessions only).
-- 📋 **Inline command menu** — quick buttons for new chat, cancel, status, and settings.
-- ⏳ **Waiting indicator** — shows `🐋 Deep diving...` while the agent is thinking.
-- 🧵 **Queue & cancel** — messages are queued; `/cancel` stops the current task and clears the queue.
+- 📋 **Inline command menus** — quick buttons for new chat, cancel, status, and settings, plus an in-chat `/commands` fallback.
+- ⏳ **Waiting indicator** — shows `🐋 Deep diving...` with heartbeats and keeps waiting while messages remain queued.
+- 🧵 **Queue & cancel** — messages are queued with a size limit; `/cancel` stops the current task and clears the queue.
 - 🗜️ **Context compaction** — `/compact` reduces conversation history when it gets long.
+- 🧹 **Safe message formatting** — HTML escaping, fenced code blocks, and code-block-aware splitting.
+- 📊 **Enhanced status** — `/status` shows busy state, provider/model, message/token stats, and preset lock state.
 - ♻️ **Persistent state** — chat → session mapping and user settings survive dsh restarts.
 - 🌐 **Proxy support** — automatically uses `HTTPS_PROXY` / `HTTP_PROXY` when available.
 - 🛡️ **Owner-only** — only the configured Telegram user ID can use the bot.
@@ -106,6 +108,7 @@ Open a private chat with your bot and send `/start`.
 | `/menu` | Open the settings panel |
 | `/compact` | Compact conversation history |
 | `/help` | Show command help |
+| `/commands` | Open the in-chat command menu |
 
 ### Settings Panel
 
@@ -121,6 +124,7 @@ Use `/menu` to:
 pnpm install
 pnpm typecheck
 pnpm build
+pnpm test
 ```
 
 ### Project Structure
@@ -137,6 +141,8 @@ dsh-telegram-bridge/
 │   ├── state.ts          # persistent state
 │   ├── config.ts         # configuration loading
 │   ├── proxy-fetch.ts    # Telegram API proxy support
+│   ├── callback.ts       # Telegram callback data codec
+│   ├── security.ts       # log redaction
 │   └── ...
 ├── extensions/dsh/       # dsh bundle patch
 └── README.md
@@ -145,9 +151,6 @@ dsh-telegram-bridge/
 ## Roadmap
 
 - [ ] V2: Full settings panel in the dsh Web UI
-- [ ] Better message formatting (safe HTML / code blocks)
-- [ ] Queue limits and per-message waiting indicators
-- [ ] Automated tests
 
 ## License
 

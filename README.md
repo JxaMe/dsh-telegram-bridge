@@ -13,10 +13,12 @@
 - 💬 **私聊桥接**：Telegram 与 dsh Agent 会话的一对一对话。
 - 🧠 **模型与思考强度控制**：动态列出并切换模型和思考强度。
 - 🎛️ **Agent preset 切换**：选择可用的 dsh preset（仅限空白会话）。
-- 📋 **内联命令菜单**：新对话、取消、状态、设置等快捷按钮。
-- ⏳ **等待提示**：Agent 思考时显示 `🌊 Deep diving...`。
-- 🧵 **队列与取消**：消息按顺序排队；`/cancel` 取消当前任务并清空队列。
+- 📋 **内联命令菜单**：新对话、取消、状态、设置等快捷按钮；也提供聊天内命令菜单 `/commands` 作为原生菜单不可见时的兜底。
+- ⏳ **等待提示**：Agent 思考时显示 `🐋 Deep diving...`，并带心跳更新和多消息排队等待。
+- 🧵 **队列与取消**：消息按顺序排队，带队列上限；`/cancel` 取消当前任务并清空队列。
 - 🗜️ **上下文压缩**：`/compact` 压缩过长的对话历史。
+- 🧹 **安全消息格式**：HTML 转义、代码块识别、按代码块边界分段发送。
+- 📊 **增强状态**：`/status` 显示忙碌状态、provider/model、消息数与 token 统计、preset 锁定状态。
 - ♻️ **状态持久化**：chat → session 映射和用户设置会在 dsh 重启后保留。
 - 🌐 **代理支持**：自动使用 `HTTPS_PROXY` / `HTTP_PROXY`。
 - 🛡️ **仅限 Owner**：只有配置的 Telegram 用户 ID 可以使用。
@@ -106,6 +108,7 @@ dsh --profile web --dump-config | grep dsh-telegram-bridge
 | `/menu` | 打开设置面板 |
 | `/compact` | 压缩对话历史 |
 | `/help` | 显示命令帮助 |
+| `/commands` | 打开聊天内命令菜单 |
 
 ### 设置面板
 
@@ -121,6 +124,7 @@ dsh --profile web --dump-config | grep dsh-telegram-bridge
 pnpm install
 pnpm typecheck
 pnpm build
+pnpm test
 ```
 
 ### 项目结构
@@ -137,6 +141,8 @@ dsh-telegram-bridge/
 │   ├── state.ts          # 持久化状态
 │   ├── config.ts         # 配置加载
 │   ├── proxy-fetch.ts    # Telegram API 代理支持
+│   ├── callback.ts       # Telegram 回调数据编解码
+│   ├── security.ts       # 日志脱敏
 │   └── ...
 ├── extensions/dsh/       # dsh bundle patch
 └── docs/aegis/           # Aegis 设计与计划文档
@@ -145,9 +151,6 @@ dsh-telegram-bridge/
 ## Roadmap
 
 - [ ] V2：在 dsh Web UI 中增加完整设置面板
-- [ ] 更完善的消息格式（安全 HTML / 代码块）
-- [ ] 队列上限与每条消息独立等待提示
-- [ ] 自动化测试
 
 ## License
 
