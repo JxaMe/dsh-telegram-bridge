@@ -1,5 +1,7 @@
 # dsh-telegram-bridge
 
+[English](./README.en.md) | **中文**
+
 将 Telegram 私聊与 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（`dsh`）Agent 会话连接起来的桥接插件。
 
 直接在 Telegram 里和你的 dsh Agent 对话：发送消息、接收回复、切换模型、调整思考强度、选择 Agent preset、管理上下文——全部在私聊中完成。
