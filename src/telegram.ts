@@ -1,10 +1,10 @@
-import { Bot, InlineKeyboard } from 'grammy';
+import { Bot, InlineKeyboard, type Context } from 'grammy';
 import { createProxiedFetch } from './proxy-fetch.js';
 import type { DshApi, DshContext } from './dsh-types.js';
 import { EventForwarder } from './forwarder.js';
 import { PendingStatus } from './pending-status.js';
 import { createRpcId } from './rpc.js';
-import { mainMenuKeyboard, settingsKeyboard } from './menu.js';
+import { effortsKeyboard, mainMenuKeyboard, modelsPageKeyboard, presetsKeyboard, settingsKeyboard } from './menu.js';
 import { QueueManager } from './queue.js';
 import { SessionManager } from './session.js';
 import { SettingsManager } from './settings.js';
@@ -149,22 +149,17 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
   });
 
   bot.callbackQuery('models', async (ctx) => {
-    const chatId = ctx.chat!.id;
-    try {
-      const sessionId = await sessions.ensureSession(chatId, state.getChatSettings(chatId));
-      const models = await settings.getModels(sessionId);
-      const keyboard = new InlineKeyboard();
-      for (const group of models.groups) {
-        for (const model of group.models) {
-          const data = encodeData(['model', group.id, model.id]);
-          keyboard.text(`${group.id}/${model.id}`, data).row();
-        }
-      }
-      await ctx.editMessageText('选择模型', { reply_markup: keyboard });
-    } catch (error) {
-      await ctx.editMessageText(`读取模型失败：${error instanceof Error ? error.message : String(error)}`);
+    await showModelsPage(ctx, 0, sessions, settings, state);
+  });
+
+  bot.callbackQuery(/^models_page\|/, async (ctx) => {
+    const parts = decodeData(ctx.callbackQuery.data);
+    const page = Number(parts[1] ?? '0');
+    if (!Number.isFinite(page) || page < 0) {
+      await ctx.answerCallbackQuery('无效的页码');
+      return;
     }
-    await ctx.answerCallbackQuery();
+    await showModelsPage(ctx, page, sessions, settings, state);
   });
 
   bot.callbackQuery(/^model\|/, async (ctx) => {
@@ -202,11 +197,8 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
         await ctx.answerCallbackQuery();
         return;
       }
-      const keyboard = new InlineKeyboard();
-      for (const effort of efforts) {
-        keyboard.text(effort.name ?? effort.id, encodeData(['effort', provider, model, effort.id])).row();
-      }
-      await ctx.editMessageText(`选择思考强度（${provider}/${model}）`, { reply_markup: keyboard });
+      const page = effortsKeyboard(provider, model, efforts, current.reasoningEffort);
+      await ctx.editMessageText(page.text, { reply_markup: page.keyboard });
     } catch (error) {
       await ctx.editMessageText(`读取思考强度失败：${error instanceof Error ? error.message : String(error)}`);
     }
@@ -236,11 +228,9 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
     const chatId = ctx.chat!.id;
     try {
       const presets = await settings.listPresets();
-      const keyboard = new InlineKeyboard();
-      for (const preset of presets) {
-        keyboard.text(preset.name ?? preset.id, encodeData(['preset', preset.id])).row();
-      }
-      await ctx.editMessageText('选择 Agent preset', { reply_markup: keyboard });
+      const currentPreset = state.getChatSettings(chatId).agentPreset;
+      const page = presetsKeyboard(presets, currentPreset);
+      await ctx.editMessageText(page.text, { reply_markup: page.keyboard });
     } catch (error) {
       await ctx.editMessageText(`读取 preset 失败：${error instanceof Error ? error.message : String(error)}`);
     }
@@ -296,6 +286,26 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
       await bot.stop();
     },
   };
+}
+
+async function showModelsPage(
+  ctx: Context,
+  page: number,
+  sessions: SessionManager,
+  settings: SettingsManager,
+  state: StateStore,
+): Promise<void> {
+  const chatId = ctx.chat!.id;
+  try {
+    const sessionId = await sessions.ensureSession(chatId, state.getChatSettings(chatId));
+    const models = await settings.getModels(sessionId);
+    const current = state.getChatSettings(chatId);
+    const pageData = modelsPageKeyboard(models, current, page);
+    await ctx.editMessageText(pageData.text, { reply_markup: pageData.keyboard });
+  } catch (error) {
+    await ctx.editMessageText(`读取模型失败：${error instanceof Error ? error.message : String(error)}`);
+  }
+  await ctx.answerCallbackQuery();
 }
 
 async function cancelCurrent(
