@@ -1,4 +1,5 @@
 import { Bot, InlineKeyboard } from 'grammy';
+import { createProxiedFetch } from './proxy-fetch.js';
 import type { DshApi, DshContext } from './dsh-types.js';
 import { EventForwarder } from './forwarder.js';
 import { mainMenuKeyboard, settingsKeyboard } from './menu.js';
@@ -17,7 +18,14 @@ export interface TelegramDeps {
 
 export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => Promise<void> }> {
   const { ctx: hostCtx, api, config, state } = deps;
-  const bot = new Bot(config.botToken);
+  const proxyUrl = process.env.HTTPS_PROXY || process.env.https_proxy || '';
+  const bot = proxyUrl
+    ? new Bot(config.botToken, {
+        client: {
+          fetch: createProxiedFetch(proxyUrl),
+        },
+      })
+    : new Bot(config.botToken);
 
   const sessions = new SessionManager(api, state, config.projectRoot ?? process.cwd());
   const settings = new SettingsManager(api, state);
