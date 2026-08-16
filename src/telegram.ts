@@ -5,6 +5,7 @@ import { EventForwarder } from './forwarder.js';
 import { PendingStatus } from './pending-status.js';
 import { createRpcId } from './rpc.js';
 import { decodeData, encodeData } from './callback.js';
+import { redactToken } from './security.js';
 import { commandMenuKeyboard, effortsKeyboard, mainMenuKeyboard, modelsPageKeyboard, presetsKeyboard, settingsKeyboard } from './menu.js';
 import { QueueManager } from './queue.js';
 import { SessionManager } from './session.js';
@@ -31,7 +32,7 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
     : new Bot(config.botToken);
 
   bot.catch((err) => {
-    console.error('dsh-telegram-bridge middleware error:', err.error);
+    console.error('dsh-telegram-bridge middleware error:', redactToken(err.error, config.botToken));
   });
 
   const pending = new PendingStatus();
@@ -333,11 +334,11 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
   });
 
   await bot.init();
-  await setupCommandMenu(bot, config.ownerId);
+  await setupCommandMenu(bot, config.ownerId, config.botToken);
   void bot.start({
     onStart: () => console.log('dsh-telegram-bridge started'),
   }).catch((error) => {
-    console.error('dsh-telegram-bridge stopped with error', error);
+    console.error('dsh-telegram-bridge stopped with error', redactToken(error, config.botToken));
   });
 
   return {
@@ -454,7 +455,7 @@ async function runCompact(
   await send(chatId, '已请求压缩。');
 }
 
-async function setupCommandMenu(bot: Bot, ownerId: number): Promise<void> {
+async function setupCommandMenu(bot: Bot, ownerId: number, botToken: string): Promise<void> {
   try {
     await bot.api.setMyCommands([
       { command: 'new', description: '开始新对话' },
@@ -463,6 +464,7 @@ async function setupCommandMenu(bot: Bot, ownerId: number): Promise<void> {
       { command: 'help', description: '帮助' },
       { command: 'menu', description: '打开设置面板' },
       { command: 'compact', description: '压缩上下文' },
+      { command: 'commands', description: '打开聊天内命令菜单' },
     ]);
     await bot.api.setChatMenuButton({
       chat_id: ownerId,
@@ -472,6 +474,6 @@ async function setupCommandMenu(bot: Bot, ownerId: number): Promise<void> {
       menu_button: { type: 'commands' },
     });
   } catch (error) {
-    console.error('Failed to setup command menu', error);
+    console.error('Failed to setup command menu', redactToken(error, botToken));
   }
 }

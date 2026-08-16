@@ -17,7 +17,7 @@ export function apply(ctx: DshContext): void {
     config = loadConfig(dataDir);
   } catch (error) {
     ctx.logger.warn(
-      `dsh-telegram-bridge: ${error instanceof Error ? error.message : String(error)}`,
+      `dsh-telegram-bridge 启动配置错误: ${error instanceof Error ? error.message : String(error)}。请检查 ${dataDir}/config.json 中的 botToken 和 ownerId。`,
     );
     return;
   }
@@ -36,7 +36,7 @@ export function apply(ctx: DshContext): void {
     })
     .catch((error) => {
       ctx.logger.warn(
-        `dsh-telegram-bridge: failed to start: ${error instanceof Error ? error.message : String(error)}`,
+        `dsh-telegram-bridge 启动失败: ${error instanceof Error ? error.message : String(error)}。请确认 botToken 有效、ownerId 正确，并检查 Telegram API 网络/代理。`,
       );
     });
 
