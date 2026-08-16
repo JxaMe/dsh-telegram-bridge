@@ -25,5 +25,6 @@
     "bundle": {
       "patch": "./extensions/dsh/cordis.patch.yml"
     }
-  }
+  },
+  "license": "MIT"
 }
