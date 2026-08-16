@@ -16,7 +16,7 @@ export class EventForwarder {
       if (!sessionId) return;
       const chatId = this.findChatId(sessionId);
       if (chatId === undefined) return;
-      const text = extractText(event.data?.content);
+      const text = extractText(event.data?.message?.content ?? event.data?.content);
       if (!text) return;
       void this.sendToTelegram(chatId, text);
     });
@@ -45,7 +45,8 @@ export class EventForwarder {
 function extractText(content: unknown): string {
   if (!Array.isArray(content)) return '';
   return content
-    .map((block: any) => (block?.type === 'text' ? String(block.text ?? '') : ''))
+    .filter((block: any) => block?.type === 'text')
+    .map((block: any) => String(block.text ?? ''))
     .join('\n')
     .trim();
 }
