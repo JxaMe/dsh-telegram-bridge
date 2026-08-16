@@ -1,4 +1,5 @@
 import type { DshApi, DshSessionModels } from './dsh-types.js';
+import { createRpcId } from './rpc.js';
 import type { StateStore } from './state.js';
 import type { ChatSettings } from './types.js';
 
@@ -9,7 +10,7 @@ export class SettingsManager {
   ) {}
 
   async getModels(sessionId: string): Promise<DshSessionModels> {
-    const res = await this.api.sessions.models({ payload: { sessionId } });
+    const res = await this.api.sessions.models({ rpcId: createRpcId(), payload: { sessionId } });
     if (!res.result.ok) {
       throw new Error(`models failed: ${JSON.stringify(res.result.error)}`);
     }
@@ -24,6 +25,7 @@ export class SettingsManager {
     reasoningEffort?: string,
   ): Promise<void> {
     const res = await this.api.sessions.selectModel({
+      rpcId: createRpcId(),
       payload: {
         sessionId,
         provider,
@@ -42,7 +44,7 @@ export class SettingsManager {
   }
 
   async listPresets() {
-    const res = await this.api.agentPresets.list({ payload: {} });
+    const res = await this.api.agentPresets.list({ rpcId: createRpcId(), payload: {} });
     if (!res.result.ok) {
       throw new Error(`presets failed: ${JSON.stringify(res.result.error)}`);
     }
@@ -51,6 +53,7 @@ export class SettingsManager {
 
   async selectPreset(chatId: number, sessionId: string, agentPreset: string): Promise<void> {
     const res = await this.api.agentPresets.select({
+      rpcId: createRpcId(),
       payload: { sessionId, agentPreset },
     });
     if (!res.result.ok) {

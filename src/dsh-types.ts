@@ -65,12 +65,14 @@ export interface DshAgentLike {
 export interface DshApi {
   sessions: {
     create(req: {
+      rpcId: string;
       payload: {
         cwd?: string;
         agentPreset?: string;
       };
     }): Promise<DshRpcResponse<{ sessionId: string }>>;
     prompt(req: {
+      rpcId: string;
       payload: {
         sessionId: string;
         mode: 'queue' | 'steer';
@@ -78,9 +80,11 @@ export interface DshApi {
       };
     }): Promise<DshRpcResponse<{ accepted: true; command?: { kind: 'success'; text?: string } }>>;
     models(req: {
+      rpcId: string;
       payload: { sessionId: string };
     }): Promise<DshRpcResponse<DshSessionModels>>;
     selectModel(req: {
+      rpcId: string;
       payload: {
         sessionId: string;
         provider: string;
@@ -90,8 +94,9 @@ export interface DshApi {
     }): Promise<DshRpcResponse<{ selected: unknown }>>;
   };
   agentPresets: {
-    list(req: { payload: {} }): Promise<DshRpcResponse<{ presets: DshPresetEntry[] }>>;
+    list(req: { rpcId: string; payload: {} }): Promise<DshRpcResponse<{ presets: DshPresetEntry[] }>>;
     select(req: {
+      rpcId: string;
       payload: {
         sessionId: string;
         agentPreset: string;

@@ -2,6 +2,7 @@ import { Bot, InlineKeyboard } from 'grammy';
 import { createProxiedFetch } from './proxy-fetch.js';
 import type { DshApi, DshContext } from './dsh-types.js';
 import { EventForwarder } from './forwarder.js';
+import { createRpcId } from './rpc.js';
 import { mainMenuKeyboard, settingsKeyboard } from './menu.js';
 import { QueueManager } from './queue.js';
 import { SessionManager } from './session.js';
@@ -342,6 +343,7 @@ async function runCompact(
     }
   }
   const res = await api.sessions.prompt({
+    rpcId: createRpcId(),
     payload: {
       sessionId: chat.sessionId,
       mode: 'queue',

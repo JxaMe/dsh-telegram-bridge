@@ -1,4 +1,5 @@
 import type { DshApi } from './dsh-types.js';
+import { createRpcId } from './rpc.js';
 import type { StateStore } from './state.js';
 import type { ChatSettings } from './types.js';
 
@@ -19,6 +20,7 @@ export class SessionManager {
 
   async createSession(chatId: number, settings: ChatSettings): Promise<string> {
     const res = await this.api.sessions.create({
+      rpcId: createRpcId(),
       payload: {
         cwd: this.projectRoot,
         agentPreset: settings.agentPreset,

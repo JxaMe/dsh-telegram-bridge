@@ -1,4 +1,5 @@
 import type { DshApi } from './dsh-types.js';
+import { createRpcId } from './rpc.js';
 import type { SessionManager } from './session.js';
 import type { StateStore } from './state.js';
 import type { ChatSettings, QueueItem } from './types.js';
@@ -42,6 +43,7 @@ export class QueueManager {
           const settings: ChatSettings = this.state.getChatSettings(chatId);
           const sessionId = await this.sessions.ensureSession(chatId, settings);
           const res = await this.api.sessions.prompt({
+            rpcId: createRpcId(),
             payload: {
               sessionId,
               mode: 'queue',
