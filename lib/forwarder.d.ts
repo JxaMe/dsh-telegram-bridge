@@ -14,3 +14,5 @@ export declare class EventForwarder {
     private findChatId;
     private sendToTelegram;
 }
+export declare function formatTelegramHtml(text: string): string;
+export declare function splitTelegramMessage(text: string, limit?: number): string[];
