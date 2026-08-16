@@ -1,10 +1,14 @@
 import type { Bot } from 'grammy';
 /**
- * Tracks the "Deep diving..." status message per chat so it can be removed
- * when the dsh agent reply arrives.
+ * Tracks the "Deep diving..." status message per chat so it can be updated
+ * while waiting and removed when the dsh agent reply arrives.
  */
 export declare class PendingStatus {
     private messageIds;
-    set(chatId: number, messageId: number): void;
+    private timers;
+    private startedAt;
+    set(bot: Bot, chatId: number, messageId: number): void;
     clear(bot: Bot, chatId: number): Promise<void>;
+    private clearTimer;
+    private scheduleNext;
 }
