@@ -1,31 +1,40 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import type { ChatSettings, ChatState, PersistedSettings, PersistedState } from './types.js';
 
 export class StateStore {
   private statePath: string;
   private settingsPath: string;
+  private state: PersistedState;
+  private settings: PersistedSettings;
+  private loaded = false;
 
   constructor(dataDir: string) {
     mkdirSync(dataDir, { recursive: true });
     this.statePath = path.join(dataDir, 'state.json');
     this.settingsPath = path.join(dataDir, 'settings.json');
+    this.state = { chats: {} };
+    this.settings = { chats: {} };
   }
 
   loadState(): PersistedState {
-    return this.readJson<PersistedState>(this.statePath, { chats: {} });
+    this.ensureLoaded();
+    return this.state;
   }
 
   saveState(state: PersistedState): void {
-    writeFileSync(this.statePath, JSON.stringify(state, null, 2) + '\n', 'utf8');
+    this.state = state;
+    this.writeJson(this.statePath, state);
   }
 
   loadSettings(): PersistedSettings {
-    return this.readJson<PersistedSettings>(this.settingsPath, { chats: {} });
+    this.ensureLoaded();
+    return this.settings;
   }
 
   saveSettings(settings: PersistedSettings): void {
-    writeFileSync(this.settingsPath, JSON.stringify(settings, null, 2) + '\n', 'utf8');
+    this.settings = settings;
+    this.writeJson(this.settingsPath, settings);
   }
 
   getChatState(chatId: number): ChatState | undefined {
@@ -35,17 +44,25 @@ export class StateStore {
   setChatState(chatId: number, state: ChatState): void {
     const all = this.loadState();
     all.chats[String(chatId)] = state;
-    this.saveState(all);
+    this.writeJson(this.statePath, all);
   }
 
   getChatSettings(chatId: number): ChatSettings {
-    return this.loadSettings().chats[String(chatId)] ?? {};
+    const value = this.loadSettings().chats[String(chatId)];
+    return value ? { ...value } : {};
   }
 
   setChatSettings(chatId: number, settings: ChatSettings): void {
     const all = this.loadSettings();
     all.chats[String(chatId)] = settings;
-    this.saveSettings(all);
+    this.writeJson(this.settingsPath, all);
+  }
+
+  private ensureLoaded(): void {
+    if (this.loaded) return;
+    this.state = this.readJson<PersistedState>(this.statePath, { chats: {} });
+    this.settings = this.readJson<PersistedSettings>(this.settingsPath, { chats: {} });
+    this.loaded = true;
   }
 
   private readJson<T>(file: string, fallback: T): T {
@@ -54,5 +71,11 @@ export class StateStore {
     } catch {
       return fallback;
     }
+  }
+
+  private writeJson(file: string, value: unknown): void {
+    const tmp = `${file}.tmp`;
+    writeFileSync(tmp, JSON.stringify(value, null, 2) + '\n', 'utf8');
+    renameSync(tmp, file);
   }
 }
