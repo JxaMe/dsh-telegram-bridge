@@ -3,6 +3,7 @@ import type { DshPresetEntry, DshSessionModels } from './dsh-types.js';
 import type { ChatSettings } from './types.js';
 export declare function mainMenuKeyboard(): InlineKeyboard;
 export declare function settingsKeyboard(): InlineKeyboard;
+export declare function commandMenuKeyboard(): InlineKeyboard;
 export interface ModelsPage {
     text: string;
     keyboard: InlineKeyboard;

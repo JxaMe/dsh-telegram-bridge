@@ -24,6 +24,19 @@ export function settingsKeyboard(): InlineKeyboard {
     .text('返回', 'back');
 }
 
+export function commandMenuKeyboard(): InlineKeyboard {
+  return new InlineKeyboard()
+    .text('新对话', 'cmd_new')
+    .text('取消', 'cmd_cancel')
+    .text('状态', 'cmd_status')
+    .row()
+    .text('设置', 'cmd_menu')
+    .text('压缩', 'cmd_compact')
+    .text('帮助', 'cmd_help')
+    .row()
+    .text('返回', 'back');
+}
+
 export interface ModelsPage {
   text: string;
   keyboard: InlineKeyboard;
