@@ -44,10 +44,10 @@ dsh Agent 会话
 
 ## 安装
 
-仓库公开后，可以通过以下命令安装：
+可以通过以下命令安装：
 
 ```bash
-dsh plugin --profile web add github:<你的GitHub用户名>/dsh-telegram-bridge
+dsh plugin --profile web add github:JxaMe/dsh-telegram-bridge
 ```
 
 本地开发安装：
