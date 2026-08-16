@@ -378,6 +378,9 @@ async function setupCommandMenu(bot: Bot, ownerId: number): Promise<void> {
       chat_id: ownerId,
       menu_button: { type: 'commands' },
     });
+    await bot.api.setChatMenuButton({
+      menu_button: { type: 'commands' },
+    });
   } catch (error) {
     console.error('Failed to setup command menu', error);
   }
