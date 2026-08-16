@@ -258,8 +258,10 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
   });
 
   await bot.init();
-  await bot.start({
+  void bot.start({
     onStart: () => console.log('dsh-telegram-bridge started'),
+  }).catch((error) => {
+    console.error('dsh-telegram-bridge stopped with error', error);
   });
 
   return {
