@@ -7,6 +7,7 @@ export declare class PendingStatus {
     private messageIds;
     private timers;
     private startedAt;
+    has(chatId: number): boolean;
     set(bot: Bot, chatId: number, messageId: number): void;
     clear(bot: Bot, chatId: number): Promise<void>;
     private clearTimer;

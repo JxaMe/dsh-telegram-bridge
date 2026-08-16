@@ -12,6 +12,10 @@ export class PendingStatus {
   private timers = new Map<number, ReturnType<typeof setTimeout>>();
   private startedAt = new Map<number, number>();
 
+  has(chatId: number): boolean {
+    return this.messageIds.has(chatId);
+  }
+
   set(bot: Bot, chatId: number, messageId: number): void {
     this.clearTimer(chatId);
     this.messageIds.set(chatId, messageId);

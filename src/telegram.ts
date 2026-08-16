@@ -44,7 +44,7 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
       // ignore report failures
     }
   });
-  const forwarder = new EventForwarder(hostCtx, bot, state, pending);
+  const forwarder = new EventForwarder(hostCtx, bot, state, pending, queue);
   forwarder.start();
 
   // Owner-only middleware
@@ -270,9 +270,15 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
   bot.on('message:text', async (ctx) => {
     const text = ctx.message.text;
     if (text.startsWith('/')) return;
-    queue.enqueue(ctx.chat.id, text);
-    const sent = await ctx.reply('🐋 Deep diving...');
-    pending.set(bot, ctx.chat.id, sent.message_id);
+    const accepted = queue.enqueue(ctx.chat.id, text);
+    if (!accepted) {
+      await ctx.reply('队列已满，请等待当前任务完成后再发送。');
+      return;
+    }
+    if (!pending.has(ctx.chat.id)) {
+      const sent = await ctx.reply('🐋 Deep diving...');
+      pending.set(bot, ctx.chat.id, sent.message_id);
+    }
     await ctx.replyWithChatAction('typing');
   });
 

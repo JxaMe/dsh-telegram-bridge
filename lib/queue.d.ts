@@ -6,11 +6,13 @@ export declare class QueueManager {
     private sessions;
     private state;
     private onError?;
+    private maxQueueSize;
     private queues;
     private processing;
-    constructor(api: DshApi, sessions: SessionManager, state: StateStore, onError?: ((chatId: number, error: unknown) => void) | undefined);
-    enqueue(chatId: number, text: string): void;
+    constructor(api: DshApi, sessions: SessionManager, state: StateStore, onError?: ((chatId: number, error: unknown) => void) | undefined, maxQueueSize?: number);
+    enqueue(chatId: number, text: string): boolean;
     clear(chatId: number): void;
     queueLength(chatId: number): number;
+    isProcessing(chatId: number): boolean;
     private drain;
 }

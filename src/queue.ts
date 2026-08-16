@@ -13,13 +13,18 @@ export class QueueManager {
     private sessions: SessionManager,
     private state: StateStore,
     private onError?: (chatId: number, error: unknown) => void,
+    private maxQueueSize = 20,
   ) {}
 
-  enqueue(chatId: number, text: string): void {
+  enqueue(chatId: number, text: string): boolean {
     const queue = this.queues.get(chatId) ?? [];
+    if (this.maxQueueSize > 0 && queue.length >= this.maxQueueSize) {
+      return false;
+    }
     queue.push({ chatId, text });
     this.queues.set(chatId, queue);
     void this.drain(chatId);
+    return true;
   }
 
   clear(chatId: number): void {
@@ -28,6 +33,10 @@ export class QueueManager {
 
   queueLength(chatId: number): number {
     return (this.queues.get(chatId) ?? []).length;
+  }
+
+  isProcessing(chatId: number): boolean {
+    return this.processing.get(chatId) ?? false;
   }
 
   private async drain(chatId: number): Promise<void> {

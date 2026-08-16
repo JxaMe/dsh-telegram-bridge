@@ -1,6 +1,7 @@
 import type { Bot } from 'grammy';
 import type { DshContext } from './dsh-types.js';
 import type { PendingStatus } from './pending-status.js';
+import type { QueueManager } from './queue.js';
 import type { StateStore } from './state.js';
 
 export class EventForwarder {
@@ -9,6 +10,7 @@ export class EventForwarder {
     private bot: Bot,
     private state: StateStore,
     private pending: PendingStatus,
+    private queue: QueueManager,
   ) {}
 
   start(): void {
@@ -42,6 +44,10 @@ export class EventForwarder {
       } catch {
         await this.bot.api.sendMessage(chatId, chunk);
       }
+    }
+    if (this.queue.queueLength(chatId) > 0) {
+      const sent = await this.bot.api.sendMessage(chatId, '🐋 Deep diving...');
+      this.pending.set(this.bot, chatId, sent.message_id);
     }
   }
 }
