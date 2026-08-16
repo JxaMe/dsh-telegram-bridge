@@ -19,8 +19,10 @@ export class SessionManager {
 
   async createSession(chatId: number, settings: ChatSettings): Promise<string> {
     const res = await this.api.sessions.create({
-      cwd: this.projectRoot,
-      agentPreset: settings.agentPreset,
+      payload: {
+        cwd: this.projectRoot,
+        agentPreset: settings.agentPreset,
+      },
     });
     if (!res.ok) {
       throw new Error(`create session failed: ${JSON.stringify(res.error)}`);

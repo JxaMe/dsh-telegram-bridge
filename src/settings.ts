@@ -9,7 +9,7 @@ export class SettingsManager {
   ) {}
 
   async getModels(sessionId: string): Promise<DshSessionModels> {
-    const res = await this.api.sessions.models({ sessionId });
+    const res = await this.api.sessions.models({ payload: { sessionId } });
     if (!res.ok) {
       throw new Error(`models failed: ${JSON.stringify(res.error)}`);
     }
@@ -24,10 +24,12 @@ export class SettingsManager {
     reasoningEffort?: string,
   ): Promise<void> {
     const res = await this.api.sessions.selectModel({
-      sessionId,
-      provider,
-      model,
-      ...(reasoningEffort ? { reasoningEffort } : {}),
+      payload: {
+        sessionId,
+        provider,
+        model,
+        ...(reasoningEffort ? { reasoningEffort } : {}),
+      },
     });
     if (!res.ok) {
       throw new Error(`selectModel failed: ${JSON.stringify(res.error)}`);
@@ -40,7 +42,7 @@ export class SettingsManager {
   }
 
   async listPresets() {
-    const res = await this.api.agentPresets.list({});
+    const res = await this.api.agentPresets.list({ payload: {} });
     if (!res.ok) {
       throw new Error(`presets failed: ${JSON.stringify(res.error)}`);
     }
@@ -48,7 +50,9 @@ export class SettingsManager {
   }
 
   async selectPreset(chatId: number, sessionId: string, agentPreset: string): Promise<void> {
-    const res = await this.api.agentPresets.select({ sessionId, agentPreset });
+    const res = await this.api.agentPresets.select({
+      payload: { sessionId, agentPreset },
+    });
     if (!res.ok) {
       if (res.error.code === 'agent-preset-locked') {
         throw new Error('当前会话已有历史，请先使用 /new 开始新对话后再切换 preset');

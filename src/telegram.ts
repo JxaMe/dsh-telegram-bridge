@@ -342,9 +342,11 @@ async function runCompact(
     }
   }
   const res = await api.sessions.prompt({
-    sessionId: chat.sessionId,
-    mode: 'queue',
-    content: [{ type: 'text', text: '/compact' }],
+    payload: {
+      sessionId: chat.sessionId,
+      mode: 'queue',
+      content: [{ type: 'text', text: '/compact' }],
+    },
   });
   if (!res.ok) {
     await send(chatId, `压缩失败：${JSON.stringify(res.error)}`);

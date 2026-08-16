@@ -60,27 +60,37 @@ export interface DshAgentLike {
 export interface DshApi {
   sessions: {
     create(req: {
-      cwd?: string;
-      agentPreset?: string;
+      payload: {
+        cwd?: string;
+        agentPreset?: string;
+      };
     }): Promise<DshResult<{ sessionId: string }>>;
     prompt(req: {
-      sessionId: string;
-      mode: 'queue' | 'steer';
-      content: DshTextContent[];
+      payload: {
+        sessionId: string;
+        mode: 'queue' | 'steer';
+        content: DshTextContent[];
+      };
     }): Promise<DshResult<{ accepted: true; command?: { kind: 'success'; text?: string } }>>;
-    models(req: { sessionId: string }): Promise<DshResult<DshSessionModels>>;
+    models(req: {
+      payload: { sessionId: string };
+    }): Promise<DshResult<DshSessionModels>>;
     selectModel(req: {
-      sessionId: string;
-      provider: string;
-      model: string;
-      reasoningEffort?: string;
+      payload: {
+        sessionId: string;
+        provider: string;
+        model: string;
+        reasoningEffort?: string;
+      };
     }): Promise<DshResult<{ selected: unknown }>>;
   };
   agentPresets: {
-    list(req: {}): Promise<DshResult<{ presets: DshPresetEntry[] }>>;
+    list(req: { payload: {} }): Promise<DshResult<{ presets: DshPresetEntry[] }>>;
     select(req: {
-      sessionId: string;
-      agentPreset: string;
+      payload: {
+        sessionId: string;
+        agentPreset: string;
+      };
     }): Promise<DshResult<{ agentPreset: string }>>;
   };
 }
