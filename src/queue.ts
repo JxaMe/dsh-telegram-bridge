@@ -41,8 +41,8 @@ export class QueueManager {
         this.queues.set(chatId, queue);
         try {
           const settings: ChatSettings = this.state.getChatSettings(chatId);
-          const sessionId = await this.sessions.ensureSession(chatId, settings);
-          const res = await this.api.sessions.prompt({
+          let sessionId = await this.sessions.ensureSession(chatId, settings);
+          let res = await this.api.sessions.prompt({
             rpcId: createRpcId(),
             payload: {
               sessionId,
@@ -50,6 +50,17 @@ export class QueueManager {
               content: [{ type: 'text', text: item.text }],
             },
           });
+          if (!res.result.ok && res.result.error.code === 'session-not-found') {
+            sessionId = await this.sessions.resetSession(chatId, settings);
+            res = await this.api.sessions.prompt({
+              rpcId: createRpcId(),
+              payload: {
+                sessionId,
+                mode: 'queue',
+                content: [{ type: 'text', text: item.text }],
+              },
+            });
+          }
           if (!res.result.ok) {
             throw new Error(`prompt failed: ${JSON.stringify(res.result.error)}`);
           }

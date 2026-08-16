@@ -29,6 +29,10 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
       })
     : new Bot(config.botToken);
 
+  bot.catch((err) => {
+    console.error('dsh-telegram-bridge middleware error:', err.error);
+  });
+
   const pending = new PendingStatus();
   const sessions = new SessionManager(api, state, config.projectRoot ?? process.cwd());
   const settings = new SettingsManager(api, state);
