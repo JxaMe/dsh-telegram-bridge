@@ -61,11 +61,11 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
   });
 
   bot.command('help', async (ctx) => {
-    await ctx.reply('📋 命令菜单（也可以直接输入 /commands）', { reply_markup: commandMenuKeyboard() });
+    await sendCommandMenu(bot, ctx.chat!.id, true);
   });
 
   bot.command('commands', async (ctx) => {
-    await ctx.reply('📋 命令菜单', { reply_markup: commandMenuKeyboard() });
+    await sendCommandMenu(bot, ctx.chat!.id, true);
   });
 
   bot.command('new', async (ctx) => {
@@ -366,6 +366,17 @@ async function showModelsPage(
     await ctx.editMessageText(`读取模型失败：${error instanceof Error ? error.message : String(error)}`);
   }
   await ctx.answerCallbackQuery();
+}
+
+async function sendCommandMenu(bot: Bot, chatId: number, pin = false): Promise<void> {
+  const sent = await bot.api.sendMessage(chatId, '📋 命令菜单', { reply_markup: commandMenuKeyboard() });
+  if (pin) {
+    try {
+      await bot.api.pinChatMessage(chatId, sent.message_id);
+    } catch {
+      // Private chats may not allow bots to pin messages; the menu is still sent.
+    }
+  }
 }
 
 async function cancelCurrent(
