@@ -273,6 +273,7 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
   });
 
   await bot.init();
+  await setupCommandMenu(bot, config.ownerId);
   void bot.start({
     onStart: () => console.log('dsh-telegram-bridge started'),
   }).catch((error) => {
@@ -362,6 +363,26 @@ async function runCompact(
   }
   await send(chatId, '已请求压缩。');
 }
+
+async function setupCommandMenu(bot: Bot, ownerId: number): Promise<void> {
+  try {
+    await bot.api.setMyCommands([
+      { command: 'new', description: '开始新对话' },
+      { command: 'cancel', description: '取消当前任务并清空队列' },
+      { command: 'status', description: '查看状态' },
+      { command: 'help', description: '帮助' },
+      { command: 'menu', description: '打开设置面板' },
+      { command: 'compact', description: '压缩上下文' },
+    ]);
+    await bot.api.setChatMenuButton({
+      chat_id: ownerId,
+      menu_button: { type: 'commands' },
+    });
+  } catch (error) {
+    console.error('Failed to setup command menu', error);
+  }
+}
+
 
 function encodeData(parts: string[]): string {
   return parts.map((part) => encodeURIComponent(part)).join('|');
