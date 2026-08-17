@@ -264,9 +264,13 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
 
   bot.callbackQuery('confirm_compact', async (ctx) => {
     const chatId = ctx.chat!.id;
-    const result = await runCompact(chatId, hostCtx, api, state);
-    await ctx.answerCallbackQuery('压缩已处理');
-    await ctx.editMessageText(result);
+    // Answer the callback immediately so the button never spins/expires,
+    // then surface "压缩中…" before the (potentially long) compaction runs.
+    await ctx.answerCallbackQuery('压缩中…').catch(() => undefined);
+    const result = await runCompact(chatId, hostCtx, api, state, async (text) => {
+      await ctx.editMessageText(text).catch(() => undefined);
+    });
+    await ctx.editMessageText(result).catch(() => undefined);
   });
 
   bot.callbackQuery('cancel_compact', async (ctx) => {
@@ -429,9 +433,17 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
         return;
       }
       if (command === 'cmd_compact') {
-        const result = await runCompact(chatId, hostCtx, api, state);
-        await bot.api.sendMessage(chatId, result);
-        await ctx.answerCallbackQuery('压缩已处理');
+        await ctx.answerCallbackQuery('压缩中…').catch(() => undefined);
+        let progressMsgId: number | undefined;
+        const result = await runCompact(chatId, hostCtx, api, state, async (text) => {
+          const sent = await bot.api.sendMessage(chatId, text).catch(() => undefined);
+          progressMsgId = sent?.message_id;
+        });
+        if (progressMsgId !== undefined) {
+          await bot.api.editMessageText(chatId, progressMsgId, result).catch(() => undefined);
+        } else {
+          await bot.api.sendMessage(chatId, result).catch(() => undefined);
+        }
         return;
       }
       if (command === 'cmd_help') {
@@ -809,11 +821,13 @@ async function runCompact(
   ctx: DshContext,
   api: DshApi,
   state: StateStore,
+  notify?: (text: string) => Promise<void>,
 ): Promise<string> {
   const chat = state.getChatState(chatId);
   if (!chat) {
     return '当前没有会话。';
   }
+  await notify?.('压缩中…');
   const agent = ctx.agents.get(chat.sessionId);
   const commands = ctx.get<{ execute(agent: unknown, line: string, signal: AbortSignal): Promise<{ result: { kind: string; text?: string } } | undefined> }>('commands') ?? ctx.commands;
   if (commands && agent) {
