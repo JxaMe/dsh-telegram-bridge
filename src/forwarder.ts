@@ -337,11 +337,29 @@ function renderDshUiItem(item: unknown): string {
       return escapeHtml(typeof record.content === 'string' ? record.content : typeof record.text === 'string' ? record.text : '');
     case 'list': {
       const values = Array.isArray(record.items) ? record.items : [];
-      return values.map((value) => `• ${escapeHtml(String(value))}`).join('\n');
+      return values
+        .map((value) => {
+          const entry = asRecord(value);
+          if (entry !== null && typeof entry.title === 'string') {
+            const desc = typeof entry.desc === 'string' && entry.desc.trim() ? ` — ${entry.desc}` : '';
+            return `• <b>${escapeHtml(entry.title)}</b>${escapeHtml(desc)}`;
+          }
+          return `• ${escapeHtml(String(value))}`;
+        })
+        .join('\n');
     }
     case 'steps': {
       const steps = Array.isArray(record.items) ? record.items : [];
-      return steps.map((step, index) => `${index + 1}. ${escapeHtml(String(step))}`).join('\n');
+      return steps
+        .map((step, index) => {
+          const entry = asRecord(step);
+          if (entry !== null && typeof entry.title === 'string') {
+            const desc = typeof entry.desc === 'string' && entry.desc.trim() ? ` — ${entry.desc}` : '';
+            return `${index + 1}. <b>${escapeHtml(entry.title)}</b>${escapeHtml(desc)}`;
+          }
+          return `${index + 1}. ${escapeHtml(String(step))}`;
+        })
+        .join('\n');
     }
     default:
       return '';

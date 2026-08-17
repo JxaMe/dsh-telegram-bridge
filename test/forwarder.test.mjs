@@ -67,6 +67,20 @@ test('formatTelegramHtml escapes plain text and preserves fenced code blocks', (
   assert.match(html, /c &gt; d/);
 });
 
+test('formatTelegramHtml renders dsh-ui list/steps with object items', () => {
+  const spec = {
+    items: [
+      { type: 'list', items: ['plain item', { title: 'DshWslManager', desc: 'WSL 管理器' }] },
+      { type: 'steps', items: ['plain step', { title: '改代码', desc: 'src/forwarder.ts' }] },
+    ],
+  };
+  const html = formatTelegramHtml('```dsh-ui\n' + JSON.stringify(spec) + '\n```');
+  assert.match(html, /• plain item/);
+  assert.match(html, /• <b>DshWslManager<\/b> — WSL 管理器/);
+  assert.match(html, /1\. plain step/);
+  assert.match(html, /2\. <b>改代码<\/b> — src\/forwarder\.ts/);
+});
+
 test('splitTelegramMessage does not split inside a short code block', () => {
   const chunks = splitTelegramMessage('a\n```js\nconst x = 1;\n```\nb', 20);
   assert.ok(chunks.some((c) => c.includes('<pre>')));
