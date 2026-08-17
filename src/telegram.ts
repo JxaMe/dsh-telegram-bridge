@@ -67,6 +67,25 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
     logger.error(`middleware error: ${logger.redact(err.error, config.botToken)}`);
   });
 
+  try {
+    const me = await bot.api.getMe();
+    debugLog(`Telegram bot connected as @${me.username ?? 'unknown'}`);
+  } catch (error) {
+    logger.error(`Telegram getMe failed: ${logger.redact(error, config.botToken)}`);
+    throw error;
+  }
+
+  void (async () => {
+    try {
+      const selfCheck = await api.agentPresets.list({ rpcId: createRpcId(), payload: {} });
+      if (!selfCheck.result.ok) {
+        logger.warn(`dsh API self-check agentPresets.list: ${JSON.stringify(selfCheck.result.error)}`);
+      }
+    } catch (error) {
+      logger.warn(`dsh API self-check failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  })();
+
   const typingEnabled = config.typingIndicator !== false;
   const pending = new PendingStatus();
   const settings = new SettingsManager(api, state);

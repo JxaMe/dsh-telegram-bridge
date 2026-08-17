@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import type { ChatSettings, ChatState, ChatStats, PersistedSettings, PersistedState, SessionRecord } from './types.js';
 
@@ -217,11 +217,22 @@ export class StateStore {
     try {
       return JSON.parse(readFileSync(file, 'utf8')) as T;
     } catch {
-      return fallback;
+      try {
+        return JSON.parse(readFileSync(`${file}.bak`, 'utf8')) as T;
+      } catch {
+        return fallback;
+      }
     }
   }
 
   private writeJson(file: string, value: unknown): void {
+    if (existsSync(file)) {
+      try {
+        copyFileSync(file, `${file}.bak`);
+      } catch {
+        // Backup is best-effort; never block writes on backup failure.
+      }
+    }
     const tmp = `${file}.tmp`;
     writeFileSync(tmp, JSON.stringify(value, null, 2) + '\n', 'utf8');
     renameSync(tmp, file);

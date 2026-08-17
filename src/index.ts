@@ -9,12 +9,15 @@ import type { PluginConfig } from './types.js';
 export const name = 'dsh-telegram-bridge';
 export const inject = ['apiProxy', 'agents', 'webServer'];
 
+let globalHandlersInstalled = false;
+
 export function apply(ctx: DshContext): void {
   const dataDir = process.env.DSH_TELEGRAM_DATA_DIR ?? defaultDataDir();
   ensureDataDir(dataDir);
   writeExampleConfig(dataDir);
 
   const logger = new Logger(dataDir);
+  installGlobalHandlers(logger);
   const state = new StateStore(dataDir);
   registerWebSettings(ctx, dataDir);
 
@@ -54,5 +57,16 @@ export function apply(ctx: DshContext): void {
         void stopFn();
       }
     };
+  });
+}
+
+function installGlobalHandlers(logger: Logger): void {
+  if (globalHandlersInstalled) return;
+  globalHandlersInstalled = true;
+  process.on('unhandledRejection', (reason) => {
+    logger.error(`unhandled rejection: ${reason instanceof Error ? (reason.stack ?? reason.message) : String(reason)}`);
+  });
+  process.on('uncaughtException', (error) => {
+    logger.error(`uncaught exception: ${error instanceof Error ? (error.stack ?? error.message) : String(error)}`);
   });
 }

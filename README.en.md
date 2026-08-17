@@ -82,7 +82,16 @@ dsh --profile web --dump-config | grep dsh-telegram-bridge
 
 Then restart `dsh web`.
 
+## Stability
+
+- **Log file**: `~/.dsh/dsh-telegram-bridge/logs/dsh-telegram-bridge.log`
+- **State backup**: `state.json.bak` / `settings.json.bak`, auto-recovered when the main file is corrupted
+- **Global guards**: unhandled rejections / exceptions are logged and kept from stopping the plugin when possible
+- **Startup self-check**: verifies Telegram API (`getMe`) and dsh API (`agentPresets.list`) on boot
+- **Status line keepalive**: long tasks rotate status text every 3s and show tool names during tool calls
+
 ## Configuration
+
 
 Create/edit `~/.dsh/dsh-telegram-bridge/config.json`:
 

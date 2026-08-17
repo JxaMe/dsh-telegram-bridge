@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { StateStore } from '../lib/state.js';
@@ -56,5 +56,15 @@ test('StateStore supports multiple sessions and per-session settings', () => {
   store.setChatSettings(1, { model: 'model-a' });
   assert.equal(store.getSessionSettings('s1').model, 'model-a');
   assert.equal(store.getSessionSettings('s2').model, 'model-b');
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('StateStore recovers from corrupted main file via backup', () => {
+  const { dir, store } = makeStore();
+  store.setChatState(1, { sessionId: 's1', createdAt: 123 });
+  store.setChatState(1, { sessionId: 's2', createdAt: 456, lastActiveAt: 789 });
+  writeFileSync(path.join(dir, 'state.json'), 'not-valid-json', 'utf8');
+  const reloaded = new StateStore(dir);
+  assert.equal(reloaded.getChatState(1).sessionId, 's1');
   rmSync(dir, { recursive: true, force: true });
 });
