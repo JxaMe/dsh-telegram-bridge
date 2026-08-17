@@ -4,6 +4,8 @@
 window.__ModuleLoader__.load({
   id: 'dsh-telegram-bridge',
   factory: (require) => {
+    var module = { exports: {} };
+    var exports = module.exports;
     const React = require('react');
     const { useState, useEffect, useCallback } = React;
 
@@ -17,7 +19,7 @@ window.__ModuleLoader__.load({
 .dsh-tg-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px 16px}
 .dsh-tg-field{display:flex;flex-direction:column;gap:6px;min-width:0}
 .dsh-tg-label{font-size:12px;font-weight:500;opacity:.78;letter-spacing:.2px}
-.dsh-tg-input{width:100%;box-sizing:border-box;background:var(--dsw-alias-input-bg, rgba(0,0,0,0.22));border:1px solid var(--dsw-alias-border-l2, rgba(255,255,255,0.14));border-radius:8px;padding:8px 10px;color:inherit;font-size:13px;line-height:1.4;transition:border-color .15s, box-shadow .15s;outline:none}
+.dsh-tg-input{width:100%;box-sizing:border-box;background:transparent;border:1px solid var(--dsw-alias-border-l2, rgba(255,255,255,0.14));border-radius:8px;padding:8px 10px;color:inherit;font-size:13px;line-height:1.4;transition:border-color .15s, box-shadow .15s;outline:none}
 .dsh-tg-input:hover{border-color:var(--dsw-alias-border-l3, rgba(255,255,255,0.24))}
 .dsh-tg-input:focus{border-color:var(--dsw-alias-interactive-bg, #4a9eff);box-shadow:0 0 0 3px rgba(74,158,255,.18)}
 .dsh-tg-input:disabled{opacity:.5;cursor:not-allowed}
@@ -298,5 +300,6 @@ window.__ModuleLoader__.load({
     }
 
     module.exports = { name, inject, apply };
+    return module.exports;
   },
 });
