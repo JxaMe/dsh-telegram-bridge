@@ -11,8 +11,11 @@ export declare class EventForwarder {
     private queue;
     private onPendingClear?;
     private htmlFormatting;
-    constructor(ctx: DshContext, bot: Bot, state: StateStore, pending: PendingStatus, queue: QueueManager, onPendingClear?: ((chatId: number) => void) | undefined, htmlFormatting?: boolean);
+    private statusLineEnabled;
+    private lastToolAt;
+    constructor(ctx: DshContext, bot: Bot, state: StateStore, pending: PendingStatus, queue: QueueManager, onPendingClear?: ((chatId: number) => void) | undefined, htmlFormatting?: boolean, statusLineEnabled?: boolean);
     start(): void;
+    private updateStatusFromEvent;
     private findChatId;
     private sendToTelegram;
 }

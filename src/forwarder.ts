@@ -3,8 +3,11 @@ import type { DshContext } from './dsh-types.js';
 import type { PendingStatus } from './pending-status.js';
 import type { QueueManager } from './queue.js';
 import type { StateStore } from './state.js';
+import { replyActionsKeyboard } from './menu.js';
 
 export class EventForwarder {
+  private lastToolAt = new Map<number, number>();
+
   constructor(
     private ctx: DshContext,
     private bot: Bot,
@@ -13,10 +16,11 @@ export class EventForwarder {
     private queue: QueueManager,
     private onPendingClear?: (chatId: number) => void,
     private htmlFormatting = true,
+    private statusLineEnabled = true,
   ) {}
 
   start(): void {
-    this.ctx.on('session/event', (session: unknown, event: unknown) => {
+    this.ctx.on('session/event', async (session: unknown, event: unknown) => {
       const evt = event as DshSessionEventEnvelope;
       if (evt?.type !== 'assistant/message') return;
       const sessionRecord = session as { id?: unknown } | null;
@@ -24,6 +28,7 @@ export class EventForwarder {
       if (!sessionId) return;
       const chatId = this.findChatId(sessionId);
       if (chatId === undefined) return;
+      this.updateStatusFromEvent(chatId, evt);
       const data = evt.data ?? {};
       const text = extractText(data.message?.content ?? data.content);
       this.state.addAssistantMessage(chatId, data.usage);
@@ -31,9 +36,54 @@ export class EventForwarder {
       if (chatState) {
         this.state.setChatState(chatId, { ...chatState, lastActiveAt: Date.now() });
       }
-      if (!text) return;
-      void this.sendToTelegram(chatId, text);
+      if (!text) {
+        await this.pending.clear(this.bot, chatId);
+        if (this.queue.queueLength(chatId) > 0) {
+          const sent = await this.bot.api.sendMessage(chatId, '🐋 正在思考...');
+          this.pending.set(this.bot, chatId, sent.message_id, this.queue.queueLength(chatId));
+        } else {
+          this.onPendingClear?.(chatId);
+        }
+        return;
+      }
+      void this.sendToTelegram(chatId, text).catch((error) => {
+        this.onPendingClear?.(chatId);
+        this.ctx.logger.warn(
+          `dsh-telegram-bridge 回复发送失败: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      });
     });
+  }
+
+  private updateStatusFromEvent(chatId: number, evt: DshSessionEventEnvelope): void {
+    if (!this.statusLineEnabled) return;
+    const data = evt.data ?? {};
+    switch (evt.type) {
+      case 'turn/start':
+        this.pending.update(this.bot, chatId, '🐋 正在思考...');
+        break;
+      case 'step/start': {
+        const step = typeof data.step === 'number' ? data.step : 0;
+        this.pending.update(this.bot, chatId, step > 1 ? `第 ${step} 步：正在思考...` : '🐋 正在思考...');
+        break;
+      }
+      case 'tool/call': {
+        const now = Date.now();
+        const last = this.lastToolAt.get(chatId) ?? 0;
+        const name = typeof data.name === 'string' ? data.name : '未知工具';
+        this.pending.update(this.bot, chatId, now - last < 3000 ? '正在连续调用工具...' : `正在调用工具：${name}`);
+        this.lastToolAt.set(chatId, now);
+        break;
+      }
+      case 'tool/result': {
+        const now = Date.now();
+        const last = this.lastToolAt.get(chatId) ?? 0;
+        this.pending.update(this.bot, chatId, now - last < 3000 ? '正在连续调用工具...' : '🐋 正在思考...');
+        break;
+      }
+      default:
+        break;
+    }
   }
 
   private findChatId(sessionId: string): number | undefined {
@@ -47,16 +97,21 @@ export class EventForwarder {
   private async sendToTelegram(chatId: number, text: string): Promise<void> {
     await this.pending.clear(this.bot, chatId);
     const chunks = splitTelegramMessage(text);
-    for (const chunk of chunks) {
+    const isLastChunk = (index: number) => index === chunks.length - 1 && this.queue.queueLength(chatId) === 0;
+    for (let index = 0; index < chunks.length; index += 1) {
+      const chunk = chunks[index];
+      const replyMarkup = isLastChunk(index) ? { reply_markup: replyActionsKeyboard() } : undefined;
       try {
-        await this.bot.api.sendMessage(chatId, chunk, { parse_mode: 'HTML' });
+        await this.bot.api.sendMessage(chatId, chunk, { parse_mode: 'HTML', ...replyMarkup });
       } catch {
-        await this.bot.api.sendMessage(chatId, chunk);
+        await this.bot.api.sendMessage(chatId, chunk, replyMarkup);
       }
     }
     if (this.queue.queueLength(chatId) > 0) {
-      const sent = await this.bot.api.sendMessage(chatId, '🐋 Deep diving...');
+      const sent = await this.bot.api.sendMessage(chatId, '🐋 正在思考...');
       this.pending.set(this.bot, chatId, sent.message_id, this.queue.queueLength(chatId));
+    } else {
+      this.onPendingClear?.(chatId);
     }
   }
 }
@@ -70,6 +125,8 @@ interface DshEventData {
   message?: { content?: unknown };
   content?: unknown;
   usage?: DshTokenUsage;
+  step?: unknown;
+  name?: unknown;
 }
 
 interface DshTokenUsage {
@@ -123,6 +180,31 @@ export function splitPlainMessage(text: string, limit = 4096): string[] {
   return chunks.length > 0 ? chunks : [''];
 }
 
+function splitLongPlainLine(line: string, limit: number): string[] {
+  const parts = line.split(/(?<=[。！？!?.])\s+/);
+  const out: string[] = [];
+  let current = '';
+  for (const part of parts) {
+    if (current.length > 0 && current.length + part.length + 1 > limit) {
+      out.push(current);
+      current = '';
+    }
+    if (part.length > limit) {
+      if (current.length > 0) {
+        out.push(current);
+        current = '';
+      }
+      for (let i = 0; i < part.length; i += limit) {
+        out.push(part.slice(i, i + limit));
+      }
+      continue;
+    }
+    current += (current.length > 0 ? ' ' : '') + part;
+  }
+  if (current.length > 0) out.push(current);
+  return out.length > 0 ? out : [line];
+}
+
 function toBlocks(text: string): TextBlock[] {
   const blocks: TextBlock[] = [];
   let plainStart = 0;
@@ -172,28 +254,68 @@ function renderBlocks(blocks: TextBlock[]): string {
 }
 
 function formatPlainText(text: string): string {
-  const parts: string[] = [];
+  const lines = text.split('\n');
+  return lines.map(formatPlainLine).join('\n');
+}
+
+function formatPlainLine(line: string): string {
+  const hrMatch = /^\s*(?:---+|\*\*\*+)\s*$/.exec(line);
+  if (hrMatch) return '<b>──────────</b>';
+
+  let prefix = '';
+  let rest = line;
+
+  const heading = /^(#{1,6})\s+(.*)$/.exec(line);
+  if (heading) {
+    rest = heading[2] ?? '';
+  }
+
+  const quote = /^>\s?(.*)$/.exec(rest);
+  if (quote) {
+    prefix += '💬 ';
+    rest = quote[1] ?? '';
+  }
+
+  const bullet = /^[-*]\s+(.*)$/.exec(rest);
+  if (bullet) {
+    prefix += '• ';
+    rest = bullet[1] ?? '';
+  }
+
+  const ordered = /^(\d+)[.)]\s+(.*)$/.exec(rest);
+  if (ordered) {
+    prefix += `${ordered[1]}. `;
+    rest = ordered[2] ?? '';
+  }
+
+  return prefix + formatInlineText(rest);
+}
+
+function formatInlineText(text: string): string {
+  let output = '';
   let last = 0;
-  const re = /`([^`]+)`|(https?:\/\/[^\s<>()"]+)/g;
+  const re = /`([^`]+)`|(https?:\/\/[^\s<>()"]+)|(\*\*[^*]+\*\*)|(\*[^*]+\*)/g;
   let m: RegExpExecArray | null;
   while ((m = re.exec(text)) !== null) {
     if (m.index > last) {
-      parts.push(escapeHtml(text.slice(last, m.index)));
+      output += escapeHtml(text.slice(last, m.index));
     }
     if (m[1] !== undefined) {
-      // Inline code
-      parts.push(`<code>${escapeHtml(m[1])}</code>`);
-    } else {
-      // Safe URL
+      output += `<code>${escapeHtml(m[1])}</code>`;
+    } else if (m[2] !== undefined) {
       const url = m[2];
-      parts.push(`<a href="${url}">${escapeHtml(url)}</a>`);
+      output += `<a href="${escapeHtml(url)}">${escapeHtml(url)}</a>`;
+    } else if (m[3] !== undefined) {
+      output += `<b>${escapeHtml(m[3].slice(2, -2))}</b>`;
+    } else if (m[4] !== undefined) {
+      output += `<i>${escapeHtml(m[4].slice(1, -1))}</i>`;
     }
     last = m.index + m[0].length;
   }
   if (last < text.length) {
-    parts.push(escapeHtml(text.slice(last)));
+    output += escapeHtml(text.slice(last));
   }
-  return parts.join('');
+  return output;
 }
 
 function renderBlock(block: TextBlock): string {
@@ -209,9 +331,17 @@ function renderBlock(block: TextBlock): string {
   }
 }
 
+const CODE_BLOCK_MAX_LINES = 50;
+
 function renderCodeBlock(block: TextBlock): string {
   const language = block.lang ? `<code>${escapeHtml(block.lang)}</code>\n` : '';
-  return `<pre>${language}${escapeHtml(block.text ?? '')}</pre>`;
+  const raw = block.text ?? '';
+  const lines = raw.split('\n');
+  let text = raw;
+  if (lines.length > CODE_BLOCK_MAX_LINES) {
+    text = `${lines.slice(0, CODE_BLOCK_MAX_LINES).join('\n')}\n… 已截断，共 ${lines.length} 行`;
+  }
+  return `<pre>${language}${escapeHtml(text)}</pre>`;
 }
 
 function chunkBlocks(blocks: TextBlock[], limit: number): string[] {
@@ -230,10 +360,18 @@ function chunkBlocks(blocks: TextBlock[], limit: number): string[] {
       const lines = (block.text ?? '').split('\n');
       for (const line of lines) {
         const renderedLine = formatPlainText(line);
-        if (line.length > limit) {
+        if (line.length > limit || renderedLine.length > limit) {
           flush();
-          for (let i = 0; i < line.length; i += limit) {
-            chunks.push(formatPlainText(line.slice(i, i + limit)));
+          if (line.length > limit) {
+            for (const part of splitLongPlainLine(line, limit)) {
+              chunks.push(formatPlainText(part));
+            }
+          } else {
+            const ratio = line.length / renderedLine.length;
+            const rawStep = Math.max(1, Math.floor(limit * ratio));
+            for (let i = 0; i < line.length; i += rawStep) {
+              chunks.push(formatPlainText(line.slice(i, i + rawStep)));
+            }
           }
           continue;
         }
@@ -360,6 +498,37 @@ function renderDshUiItem(item: unknown): string {
           return `${index + 1}. ${escapeHtml(String(step))}`;
         })
         .join('\n');
+    }
+    case 'table': {
+      const headers = Array.isArray(record.headers) ? record.headers.map(String) : [];
+      const rows = Array.isArray(record.rows) ? record.rows : [];
+      const allRows = rows
+        .map((row) => Array.isArray(row) ? row.map(String) : [])
+        .filter((row) => row.length > 0);
+      if (headers.length === 0 && allRows.length === 0) return '';
+      const renderRow = (cells: string[]) => `| ${cells.map((cell) => escapeHtml(cell)).join(' | ')} |`;
+      const lines: string[] = [];
+      if (headers.length > 0) lines.push(renderRow(headers));
+      for (const row of allRows) lines.push(renderRow(row));
+      return `<pre>${lines.join('\n')}</pre>`;
+    }
+    case 'todo': {
+      const items = Array.isArray(record.items) ? record.items : [];
+      return items
+        .map((item) => {
+          const entry = asRecord(item);
+          const done = entry !== null && (entry.done === true || entry.checked === true);
+          const title = entry !== null
+            ? typeof entry.title === 'string' ? entry.title : typeof entry.text === 'string' ? entry.text : String(item)
+            : String(item);
+          return `${done ? '✅' : '⬜'} ${escapeHtml(title)}`;
+        })
+        .join('\n');
+    }
+    case 'section': {
+      const title = typeof record.title === 'string' ? record.title : '';
+      if (!title.trim()) return '';
+      return `<b>${escapeHtml(title)}</b>\n──────────`;
     }
     default:
       return '';

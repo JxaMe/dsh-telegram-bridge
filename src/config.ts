@@ -78,5 +78,7 @@ export function loadConfig(dataDir: string): PluginConfig {
     typingIndicator: parsed.typingIndicator ?? true,
     queueLimit: parsed.queueLimit ?? 20,
     debugLogging: parsed.debugLogging ?? false,
+    statusLine: parsed.statusLine ?? true,
+    maxSessionsPerChat: parsed.maxSessionsPerChat ?? 5,
   };
 }

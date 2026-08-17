@@ -88,3 +88,29 @@ test('splitTelegramMessage does not split inside a short code block', () => {
     assert.equal((chunk.match(/<pre>/g) ?? []).length, (chunk.match(/<\/pre>/g) ?? []).length);
   }
 });
+
+test('formatTelegramHtml renders dsh-ui table/todo/section', () => {
+  const spec = {
+    items: [
+      { type: 'table', headers: ['Name', 'Status'], rows: [['A', 'ok'], ['B', 'warn']] },
+      { type: 'todo', items: [{ title: 'done', done: true }, { title: 'pending', done: false }] },
+      { type: 'section', title: 'Results' },
+    ],
+  };
+  const html = formatTelegramHtml('```dsh-ui\n' + JSON.stringify(spec) + '\n```');
+  assert.match(html, /Name \| Status/);
+  assert.match(html, /✅ done/);
+  assert.match(html, /⬜ pending/);
+  assert.match(html, /<b>Results<\/b>/);
+});
+
+test('formatTelegramHtml supports rich text and truncates long code blocks', () => {
+  const html = formatTelegramHtml('**bold** and *italic* and `code`');
+  assert.match(html, /<b>bold<\/b>/);
+  assert.match(html, /<i>italic<\/i>/);
+  assert.match(html, /<code>code<\/code>/);
+
+  const longCode = '```js\n' + Array.from({ length: 60 }, (_, i) => `line ${i}`).join('\n') + '\n```';
+  const truncated = formatTelegramHtml(longCode);
+  assert.match(truncated, /已截断，共 60 行/);
+});

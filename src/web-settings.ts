@@ -22,6 +22,8 @@ interface SettingsBody {
   typingIndicator?: boolean;
   queueLimit?: number;
   debugLogging?: boolean;
+  statusLine?: boolean;
+  maxSessionsPerChat?: number;
 }
 
 export function registerWebSettings(ctx: DshContext, dataDir: string): void {
@@ -83,6 +85,8 @@ function toPublicConfig(config: PluginConfig): Record<string, unknown> {
     typingIndicator: config.typingIndicator ?? true,
     queueLimit: config.queueLimit ?? 20,
     debugLogging: config.debugLogging ?? false,
+    statusLine: config.statusLine ?? true,
+    maxSessionsPerChat: config.maxSessionsPerChat ?? 5,
   };
 }
 
@@ -119,7 +123,12 @@ async function readConfig(dataDir: string): Promise<PluginConfig> {
   } catch {
     raw = '{}';
   }
-  const parsed = JSON.parse(raw) as Partial<PluginConfig>;
+  let parsed: Partial<PluginConfig>;
+  try {
+    parsed = JSON.parse(raw) as Partial<PluginConfig>;
+  } catch {
+    parsed = {};
+  }
   return {
     botToken: typeof parsed.botToken === 'string' ? parsed.botToken : '',
     ownerId: typeof parsed.ownerId === 'number' ? parsed.ownerId : 0,
@@ -136,6 +145,8 @@ async function readConfig(dataDir: string): Promise<PluginConfig> {
     typingIndicator: typeof parsed.typingIndicator === 'boolean' ? parsed.typingIndicator : true,
     queueLimit: typeof parsed.queueLimit === 'number' && parsed.queueLimit > 0 ? parsed.queueLimit : 20,
     debugLogging: typeof parsed.debugLogging === 'boolean' ? parsed.debugLogging : false,
+    statusLine: typeof parsed.statusLine === 'boolean' ? parsed.statusLine : true,
+    maxSessionsPerChat: typeof parsed.maxSessionsPerChat === 'number' && parsed.maxSessionsPerChat > 0 ? Math.floor(parsed.maxSessionsPerChat) : 5,
   };
 }
 
@@ -184,6 +195,12 @@ async function saveConfig(dataDir: string, body: SettingsBody): Promise<PluginCo
   }
   if (typeof body.debugLogging === 'boolean') {
     next.debugLogging = body.debugLogging;
+  }
+  if (typeof body.statusLine === 'boolean') {
+    next.statusLine = body.statusLine;
+  }
+  if (typeof body.maxSessionsPerChat === 'number' && body.maxSessionsPerChat > 0) {
+    next.maxSessionsPerChat = Math.floor(body.maxSessionsPerChat);
   }
 
   await mkdir(dataDir, { recursive: true });

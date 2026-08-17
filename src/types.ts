@@ -16,12 +16,23 @@ export interface PluginConfig {
   typingIndicator?: boolean;
   queueLimit?: number;
   debugLogging?: boolean;
+  statusLine?: boolean;
+  maxSessionsPerChat?: number;
+}
+
+export interface SessionRecord {
+  sessionId: string;
+  createdAt: number;
+  lastActiveAt?: number;
+  title?: string;
 }
 
 export interface ChatState {
   sessionId: string;
   createdAt: number;
   lastActiveAt?: number;
+  lastUserMessage?: string;
+  sessions?: SessionRecord[];
 }
 
 export interface ChatSettings {
@@ -48,6 +59,7 @@ export interface PersistedState {
 
 export interface PersistedSettings {
   chats: Record<string, ChatSettings>;
+  sessions?: Record<string, ChatSettings>;
 }
 
 export interface QueueItem {

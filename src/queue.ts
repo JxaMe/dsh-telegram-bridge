@@ -7,13 +7,13 @@ import type { ChatSettings, QueueItem } from './types.js';
 export class QueueManager {
   private queues = new Map<number, QueueItem[]>();
   private processing = new Map<number, boolean>();
-  private failedItems = new Map<number, QueueItem>();
+  private failedItems = new Map<number, Map<string, QueueItem>>();
 
   constructor(
     private api: DshApi,
     private sessions: SessionManager,
     private state: StateStore,
-    private onError?: (chatId: number, error: unknown) => void,
+    private onError?: (chatId: number, error: unknown, failureId: string) => void,
     private maxQueueSize = 20,
   ) {}
 
@@ -40,12 +40,21 @@ export class QueueManager {
     return this.processing.get(chatId) ?? false;
   }
 
-  getFailedItem(chatId: number): QueueItem | undefined {
-    return this.failedItems.get(chatId);
+  getFailedItem(chatId: number, failureId: string): QueueItem | undefined {
+    return this.failedItems.get(chatId)?.get(failureId);
   }
 
-  clearFailedItem(chatId: number): void {
-    this.failedItems.delete(chatId);
+  listFailedItems(chatId: number): Array<{ id: string; item: QueueItem }> {
+    const map = this.failedItems.get(chatId);
+    if (!map) return [];
+    return Array.from(map.entries()).map(([id, item]) => ({ id, item }));
+  }
+
+  clearFailedItem(chatId: number, failureId: string): void {
+    const map = this.failedItems.get(chatId);
+    if (!map) return;
+    map.delete(failureId);
+    if (map.size === 0) this.failedItems.delete(chatId);
   }
 
   private async drain(chatId: number): Promise<void> {
@@ -83,8 +92,11 @@ export class QueueManager {
             throw new Error(`prompt failed: ${JSON.stringify(res.result.error)}`);
           }
         } catch (error) {
-          this.failedItems.set(chatId, item);
-          this.onError?.(chatId, error);
+          const failureId = createRpcId();
+          const map = this.failedItems.get(chatId) ?? new Map<string, QueueItem>();
+          map.set(failureId, item);
+          this.failedItems.set(chatId, map);
+          this.onError?.(chatId, error, failureId);
         }
       }
     } finally {

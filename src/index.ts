@@ -13,6 +13,9 @@ export function apply(ctx: DshContext): void {
   ensureDataDir(dataDir);
   writeExampleConfig(dataDir);
 
+  const state = new StateStore(dataDir);
+  registerWebSettings(ctx, dataDir);
+
   let config: PluginConfig;
   try {
     config = loadConfig(dataDir);
@@ -22,9 +25,6 @@ export function apply(ctx: DshContext): void {
     );
     return;
   }
-
-  const state = new StateStore(config.dataDir ?? dataDir);
-  registerWebSettings(ctx, dataDir);
 
   let stopFn: (() => Promise<void>) | undefined;
   let disposed = false;

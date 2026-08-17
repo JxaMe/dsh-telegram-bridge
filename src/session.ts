@@ -32,8 +32,22 @@ export class SessionManager {
       throw new Error(`create session failed: ${JSON.stringify(res.result.error)}`);
     }
     const sessionId = res.result.value.sessionId;
-    this.state.setChatState(chatId, { sessionId, createdAt: Date.now(), lastActiveAt: Date.now() });
     const mergedSettings: ChatSettings = { ...this.defaults, ...settings };
+    if (mergedSettings.provider && mergedSettings.model) {
+      const modelRes = await this.api.sessions.selectModel({
+        rpcId: createRpcId(),
+        payload: {
+          sessionId,
+          provider: mergedSettings.provider,
+          model: mergedSettings.model,
+          ...(mergedSettings.reasoningEffort ? { reasoningEffort: mergedSettings.reasoningEffort } : {}),
+        },
+      });
+      if (!modelRes.result.ok) {
+        throw new Error(`selectModel failed: ${JSON.stringify(modelRes.result.error)}`);
+      }
+    }
+    this.state.addSession(chatId, sessionId);
     if (Object.keys(mergedSettings).length > 0) {
       this.state.setChatSettings(chatId, mergedSettings);
     }

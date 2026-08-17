@@ -39,3 +39,22 @@ test('StateStore tracks user and assistant stats', () => {
   assert.equal(reloaded.getChatStats(1).userMessages, 2);
   rmSync(dir, { recursive: true, force: true });
 });
+
+test('StateStore supports multiple sessions and per-session settings', () => {
+  const { dir, store } = makeStore();
+  store.addSession(1, 's1', 'first');
+  store.addSession(1, 's2', 'second');
+  assert.equal(store.listChatSessions(1).length, 2);
+  assert.equal(store.getChatState(1).sessionId, 's2');
+
+  store.setChatSettings(1, { model: 'model-b' });
+  assert.equal(store.getSessionSettings('s2').model, 'model-b');
+
+  store.setActiveSession(1, 's1');
+  assert.equal(store.getChatState(1).sessionId, 's1');
+  assert.deepEqual(store.getChatSettings(1), {});
+  store.setChatSettings(1, { model: 'model-a' });
+  assert.equal(store.getSessionSettings('s1').model, 'model-a');
+  assert.equal(store.getSessionSettings('s2').model, 'model-b');
+  rmSync(dir, { recursive: true, force: true });
+});

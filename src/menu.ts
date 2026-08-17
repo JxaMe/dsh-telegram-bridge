@@ -1,6 +1,6 @@
 import { InlineKeyboard } from 'grammy';
 import type { DshPresetEntry, DshSessionModels } from './dsh-types.js';
-import { encodeData } from './callback.js';
+import { encodeCallback, encodeData } from './callback.js';
 import type { ChatSettings } from './types.js';
 
 const MODEL_PAGE_SIZE = 8;
@@ -12,6 +12,7 @@ export function mainMenuKeyboard(): InlineKeyboard {
     .text('打断', 'cancel')
     .text('状态', 'status')
     .row()
+    .text('会话', 'sessions')
     .text('设置', 'menu')
     .text('命令菜单', 'command_menu');
 }
@@ -25,16 +26,25 @@ export function settingsKeyboard(settings?: ChatSettings): InlineKeyboard {
     .text('返回', 'back');
 }
 
+export function replyActionsKeyboard(): InlineKeyboard {
+  return new InlineKeyboard()
+    .text('🔄 重新生成', 'regenerate')
+    .text('⏸ 打断', 'cancel')
+    .text('🆕 新对话', 'new')
+    .text('📋 菜单', 'menu');
+}
+
 export function commandMenuKeyboard(): InlineKeyboard {
   return new InlineKeyboard()
     .text('新对话', 'cmd_new')
     .text('打断', 'cmd_interrupt')
     .text('状态', 'cmd_status')
     .row()
+    .text('会话', 'cmd_sessions')
     .text('设置', 'cmd_menu')
     .text('压缩', 'cmd_compact')
-    .text('帮助', 'cmd_help')
     .row()
+    .text('帮助', 'cmd_help')
     .text('返回', 'back');
 }
 
@@ -63,7 +73,7 @@ export function modelsPageKeyboard(
   const keyboard = new InlineKeyboard();
   for (const item of visible) {
     const selected = item.provider === current.provider && item.model === current.model;
-    keyboard.text(`${selected ? '✅ ' : ''}${item.label}`, encodeData(['model', item.provider, item.model])).row();
+    keyboard.text(`${selected ? '✅ ' : ''}${item.label}`, encodeCallback(['model', item.provider, item.model])).row();
   }
 
   const nav = new InlineKeyboard();
@@ -94,7 +104,7 @@ export function effortsKeyboard(
   const keyboard = new InlineKeyboard();
   for (const effort of efforts) {
     const selected = effort.id === currentEffort;
-    keyboard.text(`${selected ? '✅ ' : ''}${effort.name ?? effort.id}`, encodeData(['effort', provider, model, effort.id])).row();
+    keyboard.text(`${selected ? '✅ ' : ''}${effort.name ?? effort.id}`, encodeCallback(['effort', provider, model, effort.id])).row();
   }
   keyboard.append(new InlineKeyboard().text('返回', BACK_CALLBACK));
   return {
@@ -110,7 +120,7 @@ export function presetsKeyboard(
   const keyboard = new InlineKeyboard();
   for (const preset of presets) {
     const selected = preset.id === currentPreset;
-    keyboard.text(`${selected ? '✅ ' : ''}${preset.name ?? preset.id}`, encodeData(['preset', preset.id])).row();
+    keyboard.text(`${selected ? '✅ ' : ''}${preset.name ?? preset.id}`, encodeCallback(['preset', preset.id])).row();
   }
   keyboard.append(new InlineKeyboard().text('返回', BACK_CALLBACK));
   return {

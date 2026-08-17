@@ -1,6 +1,6 @@
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import type { ChatSettings, ChatState, ChatStats, PersistedSettings, PersistedState } from './types.js';
+import type { ChatSettings, ChatState, ChatStats, PersistedSettings, PersistedState, SessionRecord } from './types.js';
 
 export class StateStore {
   private statePath: string;
@@ -47,8 +47,93 @@ export class StateStore {
     this.writeJson(this.statePath, all);
   }
 
+  listChatSessions(chatId: number): SessionRecord[] {
+    const chat = this.getChatState(chatId);
+    if (!chat) return [];
+    if (chat.sessions && chat.sessions.length > 0) return chat.sessions;
+    return chat.sessionId ? [{ sessionId: chat.sessionId, createdAt: chat.createdAt, lastActiveAt: chat.lastActiveAt }] : [];
+  }
+
+  addSession(chatId: number, sessionId: string, title?: string): void {
+    const all = this.loadState();
+    const key = String(chatId);
+    const chat = all.chats[key] ?? { sessionId: '', createdAt: Date.now() };
+    const sessions = chat.sessions ?? [];
+    const existingIndex = sessions.findIndex((entry) => entry.sessionId === sessionId);
+    if (existingIndex >= 0) {
+      sessions[existingIndex] = { ...sessions[existingIndex], lastActiveAt: Date.now(), title: title ?? sessions[existingIndex].title };
+    } else {
+      sessions.push({ sessionId, createdAt: Date.now(), lastActiveAt: Date.now(), title });
+    }
+    all.chats[key] = {
+      ...chat,
+      sessionId,
+      createdAt: chat.createdAt ?? Date.now(),
+      lastActiveAt: Date.now(),
+      sessions,
+    };
+    this.writeJson(this.statePath, all);
+  }
+
+  setActiveSession(chatId: number, sessionId: string): void {
+    const all = this.loadState();
+    const key = String(chatId);
+    const chat = all.chats[key];
+    if (!chat) return;
+    const sessions = chat.sessions ?? [];
+    const sessionsUpdated = sessions.map((entry) => entry.sessionId === sessionId ? { ...entry, lastActiveAt: Date.now() } : entry);
+    if (!sessionsUpdated.some((entry) => entry.sessionId === sessionId)) {
+      sessionsUpdated.push({ sessionId, createdAt: Date.now(), lastActiveAt: Date.now() });
+    }
+    all.chats[key] = { ...chat, sessionId, lastActiveAt: Date.now(), sessions: sessionsUpdated };
+    this.writeJson(this.statePath, all);
+  }
+
+  ensureSessionTitle(chatId: number, sessionId: string, title: string): void {
+    const all = this.loadState();
+    const key = String(chatId);
+    const chat = all.chats[key];
+    if (!chat) return;
+    const sessions = chat.sessions ?? [{ sessionId: chat.sessionId, createdAt: chat.createdAt, lastActiveAt: chat.lastActiveAt }];
+    const index = sessions.findIndex((entry) => entry.sessionId === sessionId);
+    if (index >= 0 && !sessions[index].title) {
+      sessions[index] = { ...sessions[index], title };
+      all.chats[key] = { ...chat, sessions };
+      this.writeJson(this.statePath, all);
+    }
+  }
+
+  trimSessions(chatId: number, max: number): void {
+    if (max <= 0) return;
+    const all = this.loadState();
+    const key = String(chatId);
+    const chat = all.chats[key];
+    if (!chat?.sessions || chat.sessions.length <= max) return;
+    const removed = chat.sessions.slice(0, chat.sessions.length - max);
+    const remaining = chat.sessions.slice(chat.sessions.length - max);
+    if (remaining.some((entry) => entry.sessionId === chat.sessionId)) {
+      all.chats[key] = { ...chat, sessions: remaining };
+    } else {
+      const active = remaining[remaining.length - 1];
+      all.chats[key] = { ...chat, sessions: remaining, sessionId: active.sessionId, createdAt: active.createdAt, lastActiveAt: active.lastActiveAt };
+    }
+    // Keep removed settings around; they are just not listed.
+    void removed;
+    this.writeJson(this.statePath, all);
+  }
+
   getChatSettings(chatId: number): ChatSettings {
-    const value = this.loadSettings().chats[String(chatId)];
+    const chat = this.getChatState(chatId);
+    const settings = this.loadSettings();
+    if (chat?.sessionId && settings.sessions?.[chat.sessionId]) {
+      return { ...settings.sessions[chat.sessionId] };
+    }
+    const value = settings.chats[String(chatId)];
+    return value ? { ...value } : {};
+  }
+
+  getSessionSettings(sessionId: string): ChatSettings {
+    const value = this.loadSettings().sessions?.[sessionId];
     return value ? { ...value } : {};
   }
 
@@ -104,7 +189,20 @@ export class StateStore {
 
   setChatSettings(chatId: number, settings: ChatSettings): void {
     const all = this.loadSettings();
-    all.chats[String(chatId)] = settings;
+    const chat = this.getChatState(chatId);
+    if (chat?.sessionId) {
+      all.sessions ??= {};
+      all.sessions[chat.sessionId] = settings;
+    } else {
+      all.chats[String(chatId)] = settings;
+    }
+    this.writeJson(this.settingsPath, all);
+  }
+
+  setSessionSettings(sessionId: string, settings: ChatSettings): void {
+    const all = this.loadSettings();
+    all.sessions ??= {};
+    all.sessions[sessionId] = settings;
     this.writeJson(this.settingsPath, all);
   }
 

@@ -6,18 +6,20 @@ A plugin that bridges Telegram private chats to [DeepSeek Harness](https://githu
 
 Talk to your dsh agent directly from Telegram: send a message, get a reply, switch models, adjust reasoning effort, select an agent preset, and manage context — all from a private chat.
 
-> **Current version: v1.1.0** · This project is continuously updated.
+> **Current version: v1.1.2** · This project is continuously updated.
 
 ## Features
 
 - 💬 **Private chat bridge** — one-on-one conversation between Telegram and a dsh agent session.
 - 🧠 **Model & reasoning controls** — dynamically list and switch models and reasoning efforts.
 - 🎛️ **Agent preset switching** — choose from available dsh presets (blank sessions only).
-- 📋 **Inline command menus** — quick buttons for new chat, interrupt, status, and settings, plus an in-chat `/commands` fallback.
-- ⏳ **Waiting indicator** — shows `🐋 Deep diving...` with heartbeats and keeps waiting while messages remain queued.
+- 📋 **Inline command menus** — quick buttons for new chat, interrupt, status, settings, and sessions, plus an in-chat `/commands` fallback.
+- 🔄 **Quick actions** — final replies include regenerate, interrupt, new chat, and menu buttons; every failed message can be retried independently.
+- 📂 **Lightweight sessions** — each chat keeps recent sessions and can switch via `/sessions`; each session keeps its own model/preset settings.
+- ⏳ **Live status line** — shows thinking, tool calls, step progress, and elapsed time in a single editable status message.
 - 🧵 **Queue & cancel** — messages are queued with a size limit; `/interrupt` stops the current task and clears the queue (`/cancel` still works).
 - 🗜️ **Context compaction** — `/compact` reduces conversation history when it gets long.
-- 🧹 **Safe message formatting** — HTML escaping, fenced code blocks, and code-block-aware splitting.
+- 🧹 **Safe message formatting** — HTML escaping, fenced code blocks, logical boundary splitting, and long code truncation.
 - 📊 **Enhanced status** — `/status` shows busy state, provider/model, message/token stats, and preset lock state.
 - ♻️ **Persistent state** — chat → session mapping and user settings survive dsh restarts.
 - 🌐 **Proxy support** — automatically uses `HTTPS_PROXY` / `HTTP_PROXY` when available.
@@ -113,6 +115,7 @@ Open a private chat with your bot and send `/start`.
 | `/interrupt` | Interrupt the current task and clear the queue (`/cancel` still works) |
 | `/status` | Show session, queue, model, and preset status |
 | `/menu` | Open the settings panel |
+| `/sessions` | View and switch recent sessions |
 | `/compact` | Compact conversation history |
 | `/version` | Show current version and updates |
 | `/help` | Show command help |
