@@ -22,7 +22,13 @@ Talk to your dsh agent directly from Telegram: send a message, get a reply, swit
 - ♻️ **Persistent state** — chat → session mapping and user settings survive dsh restarts.
 - 🌐 **Proxy support** — automatically uses `HTTPS_PROXY` / `HTTP_PROXY` when available.
 - 🛡️ **Owner-only** — only the configured Telegram user ID can use the bot.
-- 🖥️ **dsh Web UI settings panel** — manage Bot Token, Owner, proxy, default model/preset, queue limit, and more from the dsh Web settings page.
+- 🖥️ **dsh Web UI settings panel** — manage Bot Token, Owner, proxy, default model/preset, queue limit, and more; default model and reasoning effort are loaded dynamically from dsh.
+
+## Settings Panel
+
+The dsh Web UI settings page includes a dedicated **Telegram Bridge** section for managing connection, default model/preset, and behavior options.
+
+![dsh-telegram-bridge settings](./set.png)
 
 ## How It Works
 

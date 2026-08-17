@@ -22,7 +22,13 @@
 - ♻️ **状态持久化**：chat → session 映射和用户设置会在 dsh 重启后保留。
 - 🌐 **代理支持**：自动使用 `HTTPS_PROXY` / `HTTP_PROXY`。
 - 🛡️ **仅限 Owner**：只有配置的 Telegram 用户 ID 可以使用。
-- 🖥️ **dsh Web UI 设置面板**：在 dsh Web 设置页中管理 Bot Token、Owner、代理、默认模型/Preset、队列上限等。
+- 🖥️ **dsh Web UI 设置面板**：在 dsh Web 设置页中管理 Bot Token、Owner、代理、默认模型/Preset、队列上限等；默认模型和思考强度从 dsh 动态读取。
+
+## 设置面板
+
+dsh Web UI 设置页中提供了 **Telegram Bridge** 独立分区，可直接管理连接、默认模型/Preset 和行为选项。
+
+![dsh-telegram-bridge settings](./set.png)
 
 ## 工作原理
 
