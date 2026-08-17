@@ -2,39 +2,53 @@
 
 [English](./README.en.md) | **中文**
 
-将 Telegram 私聊与 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（`dsh`）Agent 会话连接起来的桥接插件。
+将 Telegram 私聊与 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（`dsh`）Agent 会话连接起来的桥接插件。在 Telegram 里直接和你的 dsh Agent 对话：发送消息、接收回复、切换模型与思考强度、选择 Agent preset、管理上下文与多会话。
 
-直接在 Telegram 里和你的 dsh Agent 对话：发送消息、接收回复、切换模型、调整思考强度、选择 Agent preset、管理上下文——全部在私聊中完成。
+<p align="center">
+  <a href="https://github.com/JxaMe/dsh-telegram-bridge/releases"><img alt="Release" src="https://img.shields.io/github/v/release/JxaMe/dsh-telegram-bridge?style=flat-square"></a>
+  <a href="https://github.com/JxaMe/dsh-telegram-bridge/actions"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/JxaMe/dsh-telegram-bridge/ci.yml?branch=main&style=flat-square"></a>
+  <img alt="License" src="https://img.shields.io/github/license/JxaMe/dsh-telegram-bridge?style=flat-square">
+  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-strict-3178C6?style=flat-square">
+</p>
 
-> 当前版本：**v1.2.0** · 本项目持续更新中..
+> 当前版本：**v1.2.0** · 本项目持续更新中
 
-## 功能特性
+## ✨ 特性
 
-- 💬 **私聊桥接**：Telegram 与 dsh Agent 会话的一对一对话。
-- 🧠 **模型与思考强度控制**：动态列出并切换模型和思考强度。
-- 🎛️ **Agent preset 切换**：选择可用的 dsh preset（仅限空白会话）。
-- 📋 **内联命令菜单**：新对话、打断、状态、设置、会话等快捷按钮；也提供聊天内命令菜单 `/commands` 作为原生菜单不可见时的兜底。
-- 🔄 **快捷操作**：最终回复附带重新生成、打断、新对话、菜单四键；每条失败消息可独立重试。
-- 📂 **轻量多会话**：每个聊天保留最近 N 个会话，支持 `/sessions` 切换，每个会话独立保存模型/预设设置。
-- ⏳ **实时状态行**：Agent 思考、调用工具、多步骤进度、超时耗时都会在单条状态消息中实时更新。
-- 🎛️ **结构化回复渲染**：支持 dsh-ui 的 keyvalue、callout、list、steps、table、todo、section；普通文字支持加粗、斜体、标题、列表、引用。
-- 🧵 **队列与打断**：消息按顺序排队，带队列上限；`/interrupt` 打断当前任务并清空队列（`/cancel` 仍可用）。
-- 🗜️ **上下文压缩**：`/compact` 压缩过长的对话历史。
-- 🧹 **安全消息格式**：HTML 转义、代码块识别、按逻辑边界分段发送；超长代码块自动截断。
-- 📊 **增强状态**：`/status` 显示忙碌状态、provider/model、消息数与 token 统计、preset 锁定状态。
-- 🩺 **健康检查**：`/health` 显示运行时长、消息数、回复数、错误数。
-- ♻️ **状态持久化**：chat → session 映射和用户设置会在 dsh 重启后保留。
-- 🌐 **代理支持**：自动使用 `HTTPS_PROXY` / `HTTP_PROXY`。
-- 🛡️ **仅限 Owner**：只有配置的 Telegram 用户 ID 可以使用。
-- 🖥️ **dsh Web UI 设置面板**：在 dsh Web 设置页中管理 Bot Token、Owner、代理、默认模型/Preset、队列上限等；默认模型和思考强度从 dsh 动态读取。
+### 对话体验
+- 💬 **私聊桥接**：Telegram 与 dsh Agent 会话一对一对话。
+- ⏱️ **实时状态行**：显示真实活动（正在调用工具 / 正在执行命令），无真实信息时每 3 秒轮换中性文案；长任务不再“看起来像断连”。
+- 🧵 **队列与打断**：消息顺序排队，带队列上限；`/interrupt` 打断当前任务并清空队列。
+- 🔄 **重新生成**：在保留上下文的前提下，用同一 session 重发最后一条用户消息。
+- 🔁 **独立失败重试**：每条失败消息都可单独回翻重试。
 
-## 设置面板
+### 回复呈现
+- 🎛️ **结构化渲染**：支持 dsh-ui 的 `keyvalue` / `callout` / `list` / `steps` / `table` / `todo` / `section`。
+- 📝 **富文本**：加粗、斜体、标题、列表、引用、行内代码与链接。
+- 📐 **智能切分**：长消息按段落/句子边界分段；代码块按行切分并自动截断；结构化内容保持完整。
 
-dsh Web UI 设置页中提供了 **Telegram Bridge** 独立分区，可直接管理连接、默认模型/Preset 和行为选项。
+### 会话与设置
+- 📂 **轻量多会话**：每个聊天保留最近 N 个会话，`/sessions` 一键切换；每个会话独立保存模型/思考强度/Preset。
+- 🧠 **模型与思考强度控制**：动态列出并切换模型、推理强度。
+- 🎛️ **Agent preset 切换**：仅限空白会话。
+- 🖥️ **dsh Web UI 设置面板**：管理 Token、Owner、代理、默认模型/Preset、队列上限、状态行开关等。
+
+### 稳定性
+- 🗂️ **队列持久化**：排队消息（含正在处理的消息）写入 `queue.json`，重启后自动恢复（at-least-once）。
+- 📄 **文件日志**：`logs/dsh-telegram-bridge.log`，超过 5MB 自动轮转；Token 自动脱敏。
+- 💾 **状态备份**：`state.json.bak` / `settings.json.bak`，损坏时自动回退恢复。
+- 🛡️ **全局兜底**：未捕获 rejection / 异常写入日志并尽量不中断运行。
+- 🚀 **启动自检**：启动时检查 Telegram API 与 dsh API。
+- 🩺 **健康检查**：`/health` 查看运行时长、消息数、回复数、错误数。
+- 🚦 **限流保护**：Telegram 429 自动按 `retry_after` 等待后重试。
+
+## 🖥️ 设置面板
+
+dsh Web UI 设置页提供 **Telegram Bridge** 独立分区，可在页面中管理连接、默认模型/Preset 与行为选项。
 
 ![dsh-telegram-bridge settings](./set.png)
 
-## 工作原理
+## 🔧 工作原理
 
 ```text
 Telegram Bot API
@@ -44,24 +58,24 @@ dsh-telegram-bridge（dsh profile 插件）
       │
       ├── dsh apiProxy（session、模型、preset）
       ├── dsh agents（取消任务）
-      └── dsh session 事件（Agent 回复）
+      └── dsh session 事件（Agent 回复 / 状态）
       │
       ▼
 dsh Agent 会话
 ```
 
-插件运行在 dsh profile 内部（通常是 `web`），直接使用 dsh 原生服务，不需要独立服务器或 Webhook。
+插件运行在 dsh profile 内部（通常是 `web`），直接使用 dsh 原生服务，无需独立服务器或 Webhook。
 
-## 环境要求
+## 📦 环境要求
 
 - 已安装 DeepSeek Harness（`dsh`）
-- 已安装 `pnpm`（dsh 插件管理器依赖）
-- 来自 [@BotFather](https://t.me/BotFather) 的 Telegram Bot Token
-- 你的 Telegram 数字 User ID（可通过 [@userinfobot](https://t.me/userinfobot) 查询）
+- 已安装 `pnpm`
+- Telegram Bot Token（来自 [@BotFather](https://t.me/BotFather)）
+- 你的 Telegram 数字 User ID
 
-## 安装
+## 🚀 安装
 
-可以通过以下命令安装：
+从 GitHub 安装：
 
 ```bash
 dsh plugin --profile web add github:JxaMe/dsh-telegram-bridge
@@ -76,7 +90,7 @@ pnpm build
 dsh plugin --profile web add /home/los/Projects/dsh-telegram-bridge
 ```
 
-验证插件是否注册成功：
+验证注册：
 
 ```bash
 dsh --profile web --dump-config | grep dsh-telegram-bridge
@@ -84,21 +98,9 @@ dsh --profile web --dump-config | grep dsh-telegram-bridge
 
 然后重启 `dsh web`。
 
-## 稳定性
+## ⚙️ 配置
 
-- **日志文件**：`~/.dsh/dsh-telegram-bridge/logs/dsh-telegram-bridge.log`，超过 5MB 自动轮转
-- **状态备份**：`state.json.bak` / `settings.json.bak`，主文件损坏时自动回退恢复
-- **全局兜底**：未捕获的 Promise rejection / 异常会写入日志并尽量不中断运行
-- **启动自检**：启动时检查 Telegram API（`getMe`）与 dsh API（`agentPresets.list`），失败会写入日志
-- **状态行保活**：长任务期间状态行每 3 秒轮换文案，并在有工具调用时显示工具名
-- **队列持久化**：排队消息写入 `queue.json`，dsh 重启后自动恢复继续处理
-- **限流保护**：Telegram 429 限流自动等待后重试
-- **孤儿清理**：超过 7 天未活跃的会话自动移出列表（不删除 dsh session）
-
-## 配置
-
-
-创建或编辑 `~/.dsh/dsh-telegram-bridge/config.json`：
+配置文件位于 `~/.dsh/dsh-telegram-bridge/config.json`（首次启动自动生成示例）：
 
 ```json
 {
@@ -108,42 +110,61 @@ dsh --profile web --dump-config | grep dsh-telegram-bridge
 }
 ```
 
-| 字段 | 说明 |
-|---|---|
-| `botToken` | 来自 @BotFather 的 Telegram Bot Token |
-| `ownerId` | 你的 Telegram 数字 User ID |
-| `projectRoot` | 新 dsh session 使用的工作目录 |
+| 字段 | 说明 | 默认 |
+| --- | --- | --- |
+| `botToken` | Telegram Bot Token | — |
+| `ownerId` | 允许使用的 Telegram 用户 ID | — |
+| `projectRoot` | 新会话工作目录 | `process.cwd()` |
+| `proxyEnabled` / `proxyUrl` | 代理开关与地址 | `false` / `http://127.0.0.1:7890` |
+| `defaultProvider` / `defaultModel` / `defaultReasoningEffort` | 默认模型设置 | `''` |
+| `defaultAgentPreset` | 默认 Agent preset | `''` |
+| `errorDisplayMode` | 错误显示：`raw` / `friendly` | `raw` |
+| `htmlFormatting` | Telegram HTML 格式化 | `true` |
+| `typingIndicator` | 打字指示器 | `true` |
+| `statusLine` | 实时状态行 | `true` |
+| `queueLimit` | 每个聊天最多排队消息数 | `20` |
+| `maxSessionsPerChat` | 保留的最近会话数 | `5` |
+| `debugLogging` | 调试日志 | `false` |
 
-> 插件首次启动时会自动生成示例配置文件。
-
-## 使用方法
-
-打开与 bot 的私聊，发送 `/start`。
-
-### 命令
+## 📟 命令
 
 | 命令 | 说明 |
-|---|---|
+| --- | --- |
 | `/start` | 显示主菜单 |
-| `/new` | 开始新对话（需要确认） |
-| `/interrupt` | 打断当前任务并清空队列（`/cancel` 仍可用） |
-| `/status` | 查看 session、队列、模型和 preset 状态 |
-| `/menu` | 打开设置面板 |
+| `/new` | 开始新对话（需确认） |
+| `/interrupt` | 打断当前任务并清空队列（`/cancel` 同义） |
+| `/status` | 查看会话、队列、模型、Token 与运行统计 |
+| `/health` | 查看运行时长、消息/回复/错误计数 |
 | `/sessions` | 查看和切换最近会话 |
-| `/compact` | 压缩对话历史 |
+| `/menu` | 打开设置面板 |
+| `/compact` | 压缩上下文 |
+| `/commands` | 打开聊天内命令菜单 |
 | `/version` | 查看当前版本与更新 |
 | `/help` | 显示命令帮助 |
-| `/commands` | 打开聊天内命令菜单 |
 
-### 设置面板
+## 🧱 项目结构
 
-使用 `/menu` 可以：
+```text
+dsh-telegram-bridge/
+├── src/
+│   ├── index.ts           # dsh 插件入口 + 全局兜底
+│   ├── telegram.ts        # Telegram bot、命令、按钮
+│   ├── session.ts         # 多会话管理
+│   ├── queue.ts           # 消息队列 + 持久化
+│   ├── forwarder.ts       # 事件转发、格式化、切分
+│   ├── pending-status.ts  # 实时状态行
+│   ├── state.ts           # 状态持久化 + 备份恢复
+│   ├── config.ts          # 配置加载
+│   ├── logger.ts          # 文件日志 + 轮转
+│   ├── metrics.ts         # 运行指标
+│   └── ...
+├── client/                # dsh Web UI 设置面板
+├── test/                  # 单元测试
+├── docs/aegis/            # Aegis 设计与计划文档
+└── .github/workflows/     # CI / Release 自动化
+```
 
-- 切换**模型**
-- 切换**思考强度**
-- 切换 **Agent preset**（仅限空白/新会话）
-
-## 开发
+## 🧪 开发
 
 ```bash
 pnpm install
@@ -152,31 +173,15 @@ pnpm build
 pnpm test
 ```
 
-### 项目结构
+项目使用 TypeScript 严格模式。修改源码后需 `pnpm build`（生成 `lib/`），再重启 `dsh web` 生效。
 
-```text
-dsh-telegram-bridge/
-├── src/
-│   ├── index.ts          # dsh 插件入口
-│   ├── telegram.ts       # Telegram bot 与处理器
-│   ├── session.ts        # dsh session 管理
-│   ├── queue.ts          # 消息队列
-│   ├── forwarder.ts      # Agent 回复转发
-│   ├── settings.ts       # 模型/思考强度/preset 设置
-│   ├── state.ts          # 持久化状态
-│   ├── config.ts         # 配置加载
-│   ├── proxy-fetch.ts    # Telegram API 代理支持
-│   ├── callback.ts       # Telegram 回调数据编解码
-│   ├── security.ts       # 日志脱敏
-│   └── ...
-├── extensions/dsh/       # dsh bundle patch
-└── docs/aegis/           # Aegis 设计与计划文档
-```
+## 🛣️ Roadmap
 
-## Roadmap
+- [x] V1 对话桥接（消息、队列、取消、压缩、状态持久化）
+- [x] V2 dsh Web UI 全量设置面板
+- [x] UX 打磨（实时状态行、富文本、快捷操作、多会话）
+- [x] 稳定性（日志、备份、队列持久化、自检、限流、健康检查）
 
-- [x] V2：在 dsh Web UI 中增加完整设置面板（基础版已上线）
-
-## License
+## 📄 License
 
 [MIT](./LICENSE)

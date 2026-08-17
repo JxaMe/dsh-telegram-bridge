@@ -2,38 +2,53 @@
 
 **English** | [中文](./README.md)
 
-A plugin that bridges Telegram private chats to [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (`dsh`) agent sessions.
+A plugin that bridges Telegram private chats to [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (`dsh`) agent sessions. Talk to your dsh agent directly from Telegram: send messages, get replies, switch models and reasoning effort, choose agent presets, and manage context and sessions.
 
-Talk to your dsh agent directly from Telegram: send a message, get a reply, switch models, adjust reasoning effort, select an agent preset, and manage context — all from a private chat.
+<p align="center">
+  <a href="https://github.com/JxaMe/dsh-telegram-bridge/releases"><img alt="Release" src="https://img.shields.io/github/v/release/JxaMe/dsh-telegram-bridge?style=flat-square"></a>
+  <a href="https://github.com/JxaMe/dsh-telegram-bridge/actions"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/JxaMe/dsh-telegram-bridge/ci.yml?branch=main&style=flat-square"></a>
+  <img alt="License" src="https://img.shields.io/github/license/JxaMe/dsh-telegram-bridge?style=flat-square">
+  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-strict-3178C6?style=flat-square">
+</p>
 
-> **Current version: v1.2.0** · This project is continuously updated.
+> Current version: **v1.2.0** · Actively maintained
 
-## Features
+## ✨ Features
 
-- 💬 **Private chat bridge** — one-on-one conversation between Telegram and a dsh agent session.
-- 🧠 **Model & reasoning controls** — dynamically list and switch models and reasoning efforts.
-- 🎛️ **Agent preset switching** — choose from available dsh presets (blank sessions only).
-- 📋 **Inline command menus** — quick buttons for new chat, interrupt, status, settings, and sessions, plus an in-chat `/commands` fallback.
-- 🔄 **Quick actions** — final replies include regenerate, interrupt, new chat, and menu buttons; every failed message can be retried independently.
-- 📂 **Lightweight sessions** — each chat keeps recent sessions and can switch via `/sessions`; each session keeps its own model/preset settings.
-- ⏳ **Live status line** — shows thinking, tool calls, step progress, and elapsed time in a single editable status message.
-- 🧵 **Queue & cancel** — messages are queued with a size limit; `/interrupt` stops the current task and clears the queue (`/cancel` still works).
-- 🗜️ **Context compaction** — `/compact` reduces conversation history when it gets long.
-- 🧹 **Safe message formatting** — HTML escaping, fenced code blocks, logical boundary splitting, and long code truncation.
-- 📊 **Enhanced status** — `/status` shows busy state, provider/model, message/token stats, and preset lock state.
+### Conversation
+- 💬 **Private chat bridge** — one-on-one conversation between Telegram and a dsh session.
+- ⏱️ **Live status line** — shows real activity (tool calls / commands); falls back to rotating neutral phrases every 3s during long turns.
+- 🧵 **Queue & interrupt** — messages are queued with a limit; `/interrupt` cancels the current task and clears the queue.
+- 🔄 **Regenerate** — re-sends the last user message in the same session, preserving context.
+- 🔁 **Per-message retry** — every failed message can be retried independently.
+
+### Reply Rendering
+- 🎛️ **Structured output** — supports dsh-ui `keyvalue` / `callout` / `list` / `steps` / `table` / `todo` / `section`.
+- 📝 **Rich text** — bold, italic, headings, lists, quotes, inline code and links.
+- 📐 **Smart splitting** — splits at paragraph/sentence boundaries; code blocks split by line and auto-truncate; structured blocks stay intact.
+
+### Sessions & Settings
+- 📂 **Lightweight sessions** — keep the N most recent conversations per chat; switch via `/sessions`; each session keeps its own model / reasoning / preset.
+- 🧠 **Model & reasoning controls** — dynamically list and switch models and reasoning effort.
+- 🎛️ **Agent preset switching** — blank sessions only.
+- 🖥️ **dsh Web UI settings panel** — manage token, owner, proxy, defaults, queue limit, status line, and more.
+
+### Stability
+- 🗂️ **Queue persistence** — pending and in-flight messages are written to `queue.json` and recovered on restart (at-least-once).
+- 📄 **File logging** — `logs/dsh-telegram-bridge.log`, auto-rotated after 5MB, tokens redacted.
+- 💾 **State backup** — `state.json.bak` / `settings.json.bak`, auto-recovered when corrupted.
+- 🛡️ **Global guards** — unhandled rejections / exceptions are logged without stopping the plugin when possible.
+- 🚀 **Startup self-check** — validates Telegram API and dsh API on boot.
 - 🩺 **Health check** — `/health` reports uptime, messages, replies, and errors.
-- ♻️ **Persistent state** — chat → session mapping and user settings survive dsh restarts.
-- 🌐 **Proxy support** — automatically uses `HTTPS_PROXY` / `HTTP_PROXY` when available.
-- 🛡️ **Owner-only** — only the configured Telegram user ID can use the bot.
-- 🖥️ **dsh Web UI settings panel** — manage Bot Token, Owner, proxy, default model/preset, queue limit, and more; default model and reasoning effort are loaded dynamically from dsh.
+- 🚦 **Rate-limit protection** — Telegram 429 responses are retried after the requested wait.
 
-## Settings Panel
+## 🖥️ Settings Panel
 
-The dsh Web UI settings page includes a dedicated **Telegram Bridge** section for managing connection, default model/preset, and behavior options.
+The dsh Web UI settings page includes a dedicated **Telegram Bridge** section for connection, defaults, and behavior options.
 
 ![dsh-telegram-bridge settings](./set.png)
 
-## How It Works
+## 🔧 How It Works
 
 ```text
 Telegram Bot API
@@ -43,30 +58,30 @@ dsh-telegram-bridge (dsh profile plugin)
       │
       ├── dsh apiProxy (sessions, models, presets)
       ├── dsh agents (interrupt)
-      └── dsh session events (assistant replies)
+      └── dsh session events (replies / status)
       │
       ▼
 dsh agent session
 ```
 
-The plugin runs inside a dsh profile (typically `web`) and uses dsh's native services — no separate server or webhook required.
+The plugin runs inside a dsh profile (usually `web`) and uses dsh native services — no separate server or webhook required.
 
-## Requirements
+## 📦 Requirements
 
 - DeepSeek Harness (`dsh`) installed
-- `pnpm` available (used by the dsh plugin manager)
+- `pnpm` available
 - A Telegram bot token from [@BotFather](https://t.me/BotFather)
-- Your Telegram user ID (e.g. from [@userinfobot](https://t.me/userinfobot))
+- Your Telegram numeric user ID
 
-## Installation
+## 🚀 Installation
 
-Install from GitHub:
+From GitHub:
 
 ```bash
 dsh plugin --profile web add github:JxaMe/dsh-telegram-bridge
 ```
 
-For local development:
+Local development:
 
 ```bash
 cd ~/Projects/dsh-telegram-bridge
@@ -75,7 +90,7 @@ pnpm build
 dsh plugin --profile web add /home/los/Projects/dsh-telegram-bridge
 ```
 
-Verify the plugin is registered:
+Verify:
 
 ```bash
 dsh --profile web --dump-config | grep dsh-telegram-bridge
@@ -83,21 +98,9 @@ dsh --profile web --dump-config | grep dsh-telegram-bridge
 
 Then restart `dsh web`.
 
-## Stability
+## ⚙️ Configuration
 
-- **Log file**: `~/.dsh/dsh-telegram-bridge/logs/dsh-telegram-bridge.log`, auto-rotated after 5MB
-- **State backup**: `state.json.bak` / `settings.json.bak`, auto-recovered when the main file is corrupted
-- **Global guards**: unhandled rejections / exceptions are logged and kept from stopping the plugin when possible
-- **Startup self-check**: verifies Telegram API (`getMe`) and dsh API (`agentPresets.list`) on boot
-- **Status line keepalive**: long tasks rotate status text every 3s and show tool names during tool calls
-- **Queue persistence**: queued messages are written to `queue.json` and resumed after a dsh restart
-- **Rate-limit protection**: Telegram 429 responses are retried after the requested wait
-- **Orphan cleanup**: sessions inactive for over 7 days are pruned from the list (not deleted on the dsh side)
-
-## Configuration
-
-
-Create/edit `~/.dsh/dsh-telegram-bridge/config.json`:
+`~/.dsh/dsh-telegram-bridge/config.json` (generated on first start):
 
 ```json
 {
@@ -107,42 +110,39 @@ Create/edit `~/.dsh/dsh-telegram-bridge/config.json`:
 }
 ```
 
-| Field | Description |
-|---|---|
-| `botToken` | Telegram bot token from @BotFather |
-| `ownerId` | Your Telegram numeric user ID |
-| `projectRoot` | Working directory used for new dsh sessions |
+| Field | Description | Default |
+| --- | --- | --- |
+| `botToken` | Telegram bot token | — |
+| `ownerId` | Allowed Telegram user ID | — |
+| `projectRoot` | Working directory for new sessions | `process.cwd()` |
+| `proxyEnabled` / `proxyUrl` | Proxy switch and URL | `false` / `http://127.0.0.1:7890` |
+| `defaultProvider` / `defaultModel` / `defaultReasoningEffort` | Default model settings | `''` |
+| `defaultAgentPreset` | Default agent preset | `''` |
+| `errorDisplayMode` | `raw` or `friendly` | `raw` |
+| `htmlFormatting` | Telegram HTML formatting | `true` |
+| `typingIndicator` | Typing indicator | `true` |
+| `statusLine` | Live status line | `true` |
+| `queueLimit` | Max queued messages per chat | `20` |
+| `maxSessionsPerChat` | Recent sessions kept per chat | `5` |
+| `debugLogging` | Debug logging | `false` |
 
-> The plugin creates an example config file automatically on first start.
-
-## Usage
-
-Open a private chat with your bot and send `/start`.
-
-### Commands
+## 📟 Commands
 
 | Command | Description |
-|---|---|
-| `/start` | Show the main menu |
-| `/new` | Start a new conversation (requires confirmation) |
-| `/interrupt` | Interrupt the current task and clear the queue (`/cancel` still works) |
-| `/status` | Show session, queue, model, and preset status |
-| `/menu` | Open the settings panel |
+| --- | --- |
+| `/start` | Show main menu |
+| `/new` | Start a new conversation (needs confirmation) |
+| `/interrupt` | Interrupt the current task and clear the queue (`/cancel` alias) |
+| `/status` | Session, queue, model, token & runtime stats |
+| `/health` | Uptime, messages, replies, errors |
 | `/sessions` | View and switch recent sessions |
-| `/compact` | Compact conversation history |
-| `/version` | Show current version and updates |
-| `/help` | Show command help |
+| `/menu` | Open settings panel |
+| `/compact` | Compact context |
 | `/commands` | Open the in-chat command menu |
+| `/version` | Current version & updates |
+| `/help` | Command help |
 
-### Settings Panel
-
-Use `/menu` to:
-
-- Switch **model**
-- Switch **reasoning effort**
-- Switch **Agent preset** (only available on blank/new sessions)
-
-## Development
+## 🧪 Development
 
 ```bash
 pnpm install
@@ -151,31 +151,15 @@ pnpm build
 pnpm test
 ```
 
-### Project Structure
+TypeScript strict mode is used. After editing `src/`, run `pnpm build` to regenerate `lib/`, then restart `dsh web`.
 
-```text
-dsh-telegram-bridge/
-├── src/
-│   ├── index.ts          # dsh plugin entry
-│   ├── telegram.ts       # Telegram bot & handlers
-│   ├── session.ts        # dsh session management
-│   ├── queue.ts          # message queue
-│   ├── forwarder.ts      # assistant reply forwarding
-│   ├── settings.ts       # model/effort/preset settings
-│   ├── state.ts          # persistent state
-│   ├── config.ts         # configuration loading
-│   ├── proxy-fetch.ts    # Telegram API proxy support
-│   ├── callback.ts       # Telegram callback data codec
-│   ├── security.ts       # log redaction
-│   └── ...
-├── extensions/dsh/       # dsh bundle patch
-└── README.md
-```
+## 🛣️ Roadmap
 
-## Roadmap
+- [x] V1 conversation bridge (messages, queue, cancel, compact, persistence)
+- [x] V2 full dsh Web UI settings panel
+- [x] UX polish (status line, rich rendering, quick actions, sessions)
+- [x] Stability (logging, backup, queue persistence, self-check, rate limits, health)
 
-- [x] V2: Full settings panel in the dsh Web UI (initial version shipped)
-
-## License
+## 📄 License
 
 [MIT](./LICENSE)
