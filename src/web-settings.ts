@@ -43,9 +43,12 @@ export function registerWebSettings(ctx: DshContext, dataDir: string): void {
         try {
           if (req.method === 'GET' && suffix === '/settings') {
             const config = await readConfig(dataDir);
+            const modelCatalog = await listModels(ctx);
             sendJson(res, 200, {
               config: toPublicConfig(config),
               presets: await listPresets(ctx),
+              models: modelCatalog.groups,
+              modelError: modelCatalog.error,
             });
             return;
           }
