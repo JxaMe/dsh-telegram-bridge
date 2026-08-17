@@ -645,13 +645,14 @@ async function runCompact(
 async function setupCommandMenu(bot: Bot, ownerId: number, botToken: string): Promise<void> {
   try {
     await bot.api.setMyCommands([
+      { command: 'start', description: '显示主菜单和上手引导' },
       { command: 'new', description: '开始新对话' },
       { command: 'interrupt', description: '打断当前任务并清空队列' },
-      { command: 'status', description: '查看状态' },
-      { command: 'help', description: '帮助' },
+      { command: 'status', description: '查看状态与统计' },
       { command: 'menu', description: '打开设置面板' },
       { command: 'compact', description: '压缩上下文' },
       { command: 'commands', description: '打开聊天内命令菜单' },
+      { command: 'help', description: '查看命令帮助' },
     ]);
     await bot.api.setChatMenuButton({
       chat_id: ownerId,
