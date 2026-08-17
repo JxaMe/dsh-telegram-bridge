@@ -16,3 +16,4 @@ export declare class EventForwarder {
 }
 export declare function formatTelegramHtml(text: string): string;
 export declare function splitTelegramMessage(text: string, limit?: number): string[];
+export declare function escapeHtml(value: string): string;

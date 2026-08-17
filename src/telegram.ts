@@ -7,6 +7,7 @@ import { createRpcId } from './rpc.js';
 import { decodeData, encodeData } from './callback.js';
 import { friendlyError, redactToken } from './security.js';
 import { commandMenuKeyboard, effortsKeyboard, mainMenuKeyboard, modelsPageKeyboard, presetsKeyboard, settingsKeyboard } from './menu.js';
+import { escapeHtml } from './forwarder.js';
 import { QueueManager } from './queue.js';
 import { SessionManager } from './session.js';
 import { SettingsManager } from './settings.js';
@@ -135,7 +136,7 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
       return;
     }
     const text = await statusText(chatId, hostCtx, state, queue);
-    await ctx.reply(text);
+    await ctx.reply(text, { parse_mode: 'HTML' });
   });
 
   bot.command('menu', async (ctx) => {
@@ -210,7 +211,7 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
       return;
     }
     const text = await statusText(chatId, hostCtx, state, queue);
-    await ctx.reply(text);
+    await ctx.reply(text, { parse_mode: 'HTML' });
     await ctx.answerCallbackQuery();
   });
 
@@ -278,7 +279,7 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
           await ctx.answerCallbackQuery();
           return;
         }
-        await ctx.reply(await statusText(chatId, hostCtx, state, queue));
+        await ctx.reply(await statusText(chatId, hostCtx, state, queue), { parse_mode: 'HTML' });
         await ctx.answerCallbackQuery();
         return;
       }
@@ -559,18 +560,23 @@ async function statusText(
     ? settings.agentPreset ? '未知' : '无会话'
     : hasHistory ? '已锁定' : '未锁定';
 
-  const lines = [
-    `忙碌：${busy ? '是' : '否'}`,
-    `会话：${chat?.sessionId ?? '无'}`,
-    `队列：${queue.queueLength(chatId)}`,
-    `提供方：${provider}`,
-    `模型：${model}`,
-    `思考强度：${settings.reasoningEffort ?? '默认'}`,
-    `Preset：${settings.agentPreset ?? '默认'}（${lockText}）`,
-    `消息：用户 ${stats.userMessages} / 助手 ${stats.assistantMessages}`,
-    `Token：入 ${stats.inputTokens} / 出 ${stats.outputTokens}${stats.cacheReadTokens || stats.cacheWriteTokens ? `，缓存 ${stats.cacheReadTokens ?? 0}/${stats.cacheWriteTokens ?? 0}` : ''}`,
-  ];
-  return lines.join('\n');
+  const sessionId = chat?.sessionId ?? '无';
+  const presetName = settings.agentPresetName ?? settings.agentPreset ?? '默认';
+  const cacheStr = stats.cacheReadTokens || stats.cacheWriteTokens
+    ? `，缓存 ${stats.cacheReadTokens ?? 0}/${stats.cacheWriteTokens ?? 0}`
+    : '';
+
+  return (
+    `<b>忙碌：</b>${busy ? '是' : '否'}\n`
+    + `<b>会话：</b><code>${escapeHtml(sessionId)}</code>\n`
+    + `<b>队列：</b>${queue.queueLength(chatId)}\n`
+    + `<b>提供方：</b>${escapeHtml(provider)}\n`
+    + `<b>模型：</b>${escapeHtml(model)}\n`
+    + `<b>思考强度：</b>${escapeHtml(settings.reasoningEffort ?? '默认')}\n`
+    + `<b>Preset：</b>${escapeHtml(presetName)}（${lockText}）\n`
+    + `<b>消息：</b>用户 ${stats.userMessages} / 助手 ${stats.assistantMessages}\n`
+    + `<b>Token：</b>入 ${stats.inputTokens} / 出 ${stats.outputTokens}${cacheStr}`
+  );
 }
 
 async function runCompact(
