@@ -112,7 +112,8 @@ export class EventForwarder {
   private async sendToTelegram(chatId: number, text: string): Promise<void> {
     await this.pending.clear(this.bot, chatId);
     const chunks = splitTelegramMessage(text);
-    const isLastChunk = (index: number) => index === chunks.length - 1 && this.queue.queueLength(chatId) === 0;
+    const showActions = this.queue.queueLength(chatId) === 0 && shouldShowQuickActions(text);
+    const isLastChunk = (index: number) => index === chunks.length - 1 && showActions;
     for (let index = 0; index < chunks.length; index += 1) {
       const chunk = chunks[index];
       const replyMarkup = isLastChunk(index) ? { reply_markup: replyActionsKeyboard() } : undefined;
@@ -150,6 +151,13 @@ export class EventForwarder {
     }
     throw lastError;
   }
+}
+
+function shouldShowQuickActions(text: string): boolean {
+  if (text.length >= 500) return true;
+  if (text.includes('```')) return true;
+  if (text.includes('dsh-ui')) return true;
+  return false;
 }
 
 function sleep(ms: number): Promise<void> {
