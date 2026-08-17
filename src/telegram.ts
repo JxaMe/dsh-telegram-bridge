@@ -290,12 +290,14 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
 
   bot.callbackQuery('confirm_new', async (ctx) => {
     const chatId = ctx.chat!.id;
+    // Answer the callback immediately so the button never spins/expires,
+    // then run the (possibly slow) session reset before posting the result.
+    await ctx.answerCallbackQuery('开始新对话…').catch(() => undefined);
     await cancelCurrent(chatId, hostCtx, state, queue);
     await pending.clear(bot, chatId);
     const chatSettings = state.getChatSettings(chatId);
     await sessions.resetSession(chatId, chatSettings);
-    await ctx.editMessageText('已开始新对话。');
-    await ctx.answerCallbackQuery();
+    await ctx.editMessageText('已开始新对话。').catch(() => undefined);
   });
 
   bot.callbackQuery('cancel_new', async (ctx) => {
