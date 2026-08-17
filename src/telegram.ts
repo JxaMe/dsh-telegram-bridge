@@ -37,8 +37,24 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
   });
 
   const pending = new PendingStatus();
-  const sessions = new SessionManager(api, state, config.projectRoot ?? process.cwd());
   const settings = new SettingsManager(api, state);
+  const sessions = new SessionManager(
+    api,
+    state,
+    config.projectRoot ?? process.cwd(),
+    async (chatId, _sessionId) => {
+      try {
+        const chatSettings = state.getChatSettings(chatId);
+        const presetName = chatSettings.agentPresetName ?? chatSettings.agentPreset ?? '默认';
+        await bot.api.sendMessage(
+          chatId,
+          `🆕 新会话已创建\n模型：${chatSettings.model ?? '默认'}\nPreset：${presetName}`,
+        );
+      } catch {
+        // Notification failure should not break session creation.
+      }
+    },
+  );
   const queue = new QueueManager(api, sessions, state, async (chatId, error) => {
     try {
       await pending.clear(bot, chatId);
@@ -424,6 +440,10 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
     const text = ctx.message.text;
     if (text.startsWith('/')) return;
     state.incrementUserMessage(ctx.chat.id);
+    const chatState = state.getChatState(ctx.chat.id);
+    if (chatState) {
+      state.setChatState(ctx.chat.id, { ...chatState, lastActiveAt: Date.now() });
+    }
     const accepted = queue.enqueue(ctx.chat.id, text);
     if (!accepted) {
       await ctx.reply('队列已满，请等待当前任务完成后再发送。');
@@ -565,9 +585,13 @@ async function statusText(
   const cacheStr = stats.cacheReadTokens || stats.cacheWriteTokens
     ? `，缓存 ${stats.cacheReadTokens ?? 0}/${stats.cacheWriteTokens ?? 0}`
     : '';
+  const idleMs = 5 * 60 * 1000;
+  const recentActive = chat?.lastActiveAt !== undefined && Date.now() - chat.lastActiveAt < idleMs;
+  const lifecycle = busy ? '处理中' : recentActive ? '活跃' : '空闲';
 
   return (
-    `<b>忙碌：</b>${busy ? '是' : '否'}\n`
+    `<b>状态：</b>${lifecycle}\n`
+    + `<b>忙碌：</b>${busy ? '是' : '否'}\n`
     + `<b>会话：</b><code>${escapeHtml(sessionId)}</code>\n`
     + `<b>队列：</b>${queue.queueLength(chatId)}\n`
     + `<b>提供方：</b>${escapeHtml(provider)}\n`

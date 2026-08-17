@@ -8,6 +8,7 @@ export interface PluginConfig {
 export interface ChatState {
   sessionId: string;
   createdAt: number;
+  lastActiveAt?: number;
 }
 
 export interface ChatSettings {

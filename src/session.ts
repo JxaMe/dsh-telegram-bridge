@@ -8,6 +8,7 @@ export class SessionManager {
     private api: DshApi,
     private state: StateStore,
     private projectRoot: string,
+    private onCreated?: (chatId: number, sessionId: string) => void,
   ) {}
 
   async ensureSession(chatId: number, settings: ChatSettings): Promise<string> {
@@ -30,7 +31,8 @@ export class SessionManager {
       throw new Error(`create session failed: ${JSON.stringify(res.result.error)}`);
     }
     const sessionId = res.result.value.sessionId;
-    this.state.setChatState(chatId, { sessionId, createdAt: Date.now() });
+    this.state.setChatState(chatId, { sessionId, createdAt: Date.now(), lastActiveAt: Date.now() });
+    this.onCreated?.(chatId, sessionId);
     return sessionId;
   }
 
