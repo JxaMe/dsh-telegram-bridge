@@ -102,6 +102,9 @@ export interface DshApi {
       };
     }): Promise<DshRpcResponse<{ selected: unknown }>>;
   };
+  llm: {
+    models(req: { rpcId: string; payload: {} }): Promise<DshRpcResponse<{ groups: DshSessionModels['groups'] }>>;
+  };
   agentPresets: {
     list(req: { rpcId: string; payload: {} }): Promise<DshRpcResponse<{ presets: DshPresetEntry[] }>>;
     select(req: {

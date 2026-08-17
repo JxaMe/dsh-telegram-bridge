@@ -112,6 +112,14 @@ export interface DshApi {
             selected: unknown;
         }>>;
     };
+    llm: {
+        models(req: {
+            rpcId: string;
+            payload: {};
+        }): Promise<DshRpcResponse<{
+            groups: DshSessionModels['groups'];
+        }>>;
+    };
     agentPresets: {
         list(req: {
             rpcId: string;

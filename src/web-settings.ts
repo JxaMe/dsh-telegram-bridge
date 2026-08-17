@@ -83,34 +83,9 @@ function toPublicConfig(config: PluginConfig): Record<string, unknown> {
   };
 }
 
-async function listModels(ctx: DshContext, dataDir: string): Promise<Array<{ id: string; models: Array<{ id: string; name?: string; reasoning?: { efforts?: Array<{ id: string; name?: string }> } }> }>> {
-  const existing = await findAnySessionId(dataDir);
-  if (existing) {
-    const groups = await tryListModels(ctx, existing);
-    if (groups.length > 0) return groups;
-  }
-  // The stored session may be stale after a restart; fall back to a fresh
-  // temporary session just to read the model catalog.
+async function listModels(ctx: DshContext): Promise<Array<{ id: string; models: Array<{ id: string; name?: string; reasoning?: { efforts?: Array<{ id: string; name?: string }> } }> }>> {
   try {
-    const created = await ctx.apiProxy.sessions.create({
-      rpcId: crypto.randomUUID(),
-      payload: { cwd: (await readConfig(dataDir)).projectRoot || process.cwd() },
-    });
-    if (created.result.ok) {
-      return await tryListModels(ctx, created.result.value.sessionId);
-    }
-  } catch {
-    // ignore
-  }
-  return [];
-}
-
-async function tryListModels(ctx: DshContext, sessionId: string): Promise<Array<{ id: string; models: Array<{ id: string; name?: string; reasoning?: { efforts?: Array<{ id: string; name?: string }> } }> }>> {
-  try {
-    const res = await ctx.apiProxy.sessions.models({
-      rpcId: crypto.randomUUID(),
-      payload: { sessionId },
-    });
+    const res = await ctx.apiProxy.llm.models({ rpcId: crypto.randomUUID(), payload: {} });
     if (!res.result.ok) return [];
     return res.result.value.groups;
   } catch {
@@ -118,18 +93,6 @@ async function tryListModels(ctx: DshContext, sessionId: string): Promise<Array<
   }
 }
 
-async function findAnySessionId(dataDir: string): Promise<string | undefined> {
-  try {
-    const raw = await readFile(path.join(dataDir, 'state.json'), 'utf8');
-    const state = JSON.parse(raw) as { chats?: Record<string, { sessionId?: string }> };
-    for (const chat of Object.values(state.chats ?? {})) {
-      if (chat?.sessionId) return chat.sessionId;
-    }
-  } catch {
-    // No state file yet.
-  }
-  return undefined;
-}
 
 async function listPresets(ctx: DshContext): Promise<Array<{ id: string; name?: string }>> {
   try {
