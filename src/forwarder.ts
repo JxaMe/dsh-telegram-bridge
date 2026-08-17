@@ -4,6 +4,7 @@ import type { PendingStatus } from './pending-status.js';
 import type { QueueManager } from './queue.js';
 import type { StateStore } from './state.js';
 import { replyActionsKeyboard } from './menu.js';
+import { incrReplySent } from './metrics.js';
 import type { Logger } from './logger.js';
 
 export class EventForwarder {
@@ -121,6 +122,7 @@ export class EventForwarder {
         await this.bot.api.sendMessage(chatId, chunk, replyMarkup);
       }
     }
+    incrReplySent();
     if (this.queue.queueLength(chatId) > 0) {
       const sent = await this.bot.api.sendMessage(chatId, '🐋 正在思考...');
       this.pending.set(this.bot, chatId, sent.message_id, this.queue.queueLength(chatId));

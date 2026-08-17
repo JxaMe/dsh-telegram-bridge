@@ -1,3 +1,5 @@
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
 import type { DshApi } from './dsh-types.js';
 import { createRpcId } from './rpc.js';
 import type { SessionManager } from './session.js';
@@ -15,7 +17,13 @@ export class QueueManager {
     private state: StateStore,
     private onError?: (chatId: number, error: unknown, failureId: string) => void,
     private maxQueueSize = 20,
-  ) {}
+    private dataDir?: string,
+  ) {
+    this.loadQueues();
+    for (const chatId of this.queues.keys()) {
+      void this.drain(chatId);
+    }
+  }
 
   enqueue(chatId: number, text: string): boolean {
     const queue = this.queues.get(chatId) ?? [];
@@ -24,12 +32,14 @@ export class QueueManager {
     }
     queue.push({ chatId, text });
     this.queues.set(chatId, queue);
+    this.persistQueues();
     void this.drain(chatId);
     return true;
   }
 
   clear(chatId: number): void {
     this.queues.set(chatId, []);
+    this.persistQueues();
   }
 
   queueLength(chatId: number): number {
@@ -57,6 +67,39 @@ export class QueueManager {
     if (map.size === 0) this.failedItems.delete(chatId);
   }
 
+  private loadQueues(): void {
+    if (!this.dataDir) return;
+    try {
+      const file = path.join(this.dataDir, 'queue.json');
+      if (!existsSync(file)) return;
+      const parsed = JSON.parse(readFileSync(file, 'utf8')) as Record<string, QueueItem[]>;
+      for (const [chatId, items] of Object.entries(parsed)) {
+        if (Array.isArray(items)) {
+          this.queues.set(Number(chatId), items.filter((item) => item && typeof item.text === 'string'));
+        }
+      }
+    } catch {
+      // A corrupted queue file is ignored; the queue just starts empty.
+    }
+  }
+
+  private persistQueues(): void {
+    if (!this.dataDir) return;
+    try {
+      mkdirSync(this.dataDir, { recursive: true });
+      const file = path.join(this.dataDir, 'queue.json');
+      const tmp = `${file}.tmp`;
+      const data: Record<string, QueueItem[]> = {};
+      for (const [chatId, items] of this.queues) {
+        if (items.length > 0) data[String(chatId)] = items;
+      }
+      writeFileSync(tmp, JSON.stringify(data, null, 2) + '\n', 'utf8');
+      renameSync(tmp, file);
+    } catch {
+      // Persistence is best-effort; never break the queue on write failure.
+    }
+  }
+
   private async drain(chatId: number): Promise<void> {
     if (this.processing.get(chatId)) return;
     this.processing.set(chatId, true);
@@ -66,6 +109,7 @@ export class QueueManager {
         const item = queue.shift();
         if (!item) break;
         this.queues.set(chatId, queue);
+        this.persistQueues();
         try {
           const settings: ChatSettings = this.state.getChatSettings(chatId);
           let sessionId = await this.sessions.ensureSession(chatId, settings);

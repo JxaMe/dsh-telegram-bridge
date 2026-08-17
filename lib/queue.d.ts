@@ -8,10 +8,11 @@ export declare class QueueManager {
     private state;
     private onError?;
     private maxQueueSize;
+    private dataDir?;
     private queues;
     private processing;
     private failedItems;
-    constructor(api: DshApi, sessions: SessionManager, state: StateStore, onError?: ((chatId: number, error: unknown, failureId: string) => void) | undefined, maxQueueSize?: number);
+    constructor(api: DshApi, sessions: SessionManager, state: StateStore, onError?: ((chatId: number, error: unknown, failureId: string) => void) | undefined, maxQueueSize?: number, dataDir?: string | undefined);
     enqueue(chatId: number, text: string): boolean;
     clear(chatId: number): void;
     queueLength(chatId: number): number;
@@ -22,5 +23,7 @@ export declare class QueueManager {
         item: QueueItem;
     }>;
     clearFailedItem(chatId: number, failureId: string): void;
+    private loadQueues;
+    private persistQueues;
     private drain;
 }

@@ -12,6 +12,7 @@ import { QueueManager } from './queue.js';
 import { SessionManager } from './session.js';
 import { SettingsManager } from './settings.js';
 import { StateStore } from './state.js';
+import { getMetrics, incrError, incrMessageReceived } from './metrics.js';
 import { checkLatestVersion } from './update-check.js';
 import { currentVersion } from './version.js';
 import type { Logger } from './logger.js';
@@ -36,6 +37,7 @@ const HELP_TEXT = (
   + '<b>/compact</b> - 压缩对话历史\n'
   + '<b>/commands</b> - 打开聊天内命令菜单\n'
   + '<b>/version</b> - 查看当前版本与最新版本\n'
+  + '<b>/health</b> - 查看运行状态与统计\n'
   + '<b>/help</b> - 显示本帮助\n\n'
   + '💡 <b>提示</b>\n'
   + '• 直接发消息即可与 dsh 对话\n'
@@ -125,6 +127,7 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
       try {
         await pending.showErrorThenClear(bot, chatId);
         stopTyping(chatId);
+        incrError();
         const failed = queue.getFailedItem(chatId, failureId);
         const keyboard = failed ? new InlineKeyboard().text('🔄 重试', encodeCallback(['retry', failureId])) : undefined;
         await bot.api.sendMessage(chatId, `处理失败：${errorText(error)}`, {
@@ -135,6 +138,7 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
       }
     },
     config.queueLimit ?? 20,
+    config.dataDir ?? process.env.DSH_TELEGRAM_DATA_DIR,
   );
   const forwarder = new EventForwarder(hostCtx, bot, state, pending, queue, (chatId) => stopTyping(chatId), config.htmlFormatting !== false, config.statusLine !== false);
   forwarder.start();
@@ -229,6 +233,17 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
     const chatId = ctx.chat!.id;
     const panel = await sessionsPanel(state, chatId);
     await ctx.reply(panel.text, { reply_markup: panel.keyboard });
+  });
+
+  bot.command('health', async (ctx) => {
+    const m = getMetrics();
+    await ctx.reply(
+      '✅ dsh-telegram-bridge 运行正常\n'
+      + `运行时长：${formatUptime(m.uptimeSeconds)}\n`
+      + `收到消息：${m.messagesReceived}\n`
+      + `发送回复：${m.repliesSent}\n`
+      + `错误次数：${m.errors}`,
+    );
   });
 
   bot.command('compact', async (ctx) => {
@@ -565,6 +580,7 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
   bot.on('message:text', async (ctx) => {
     const text = ctx.message.text;
     if (text.startsWith('/')) return;
+    incrMessageReceived();
     state.incrementUserMessage(ctx.chat.id);
     const chatState = state.getChatState(ctx.chat.id);
     if (chatState) {
@@ -828,6 +844,7 @@ async function setupCommandMenu(bot: Bot, ownerId: number, botToken: string, log
     { command: 'compact', description: '压缩上下文' },
     { command: 'commands', description: '打开聊天内命令菜单' },
     { command: 'version', description: '查看版本与更新' },
+    { command: 'health', description: '查看运行状态与统计' },
     { command: 'help', description: '查看命令帮助' },
   ];
   try {
@@ -854,4 +871,13 @@ async function setupCommandMenu(bot: Bot, ownerId: number, botToken: string, log
   } catch (error) {
     logger.error(`Failed to setup command menu: ${logger.redact(error, botToken)}`);
   }
+}
+
+function formatUptime(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  if (h > 0) return `${h}小时 ${m}分 ${s}秒`;
+  if (m > 0) return `${m}分 ${s}秒`;
+  return `${s}秒`;
 }

@@ -21,6 +21,7 @@ Talk to your dsh agent directly from Telegram: send a message, get a reply, swit
 - 🗜️ **Context compaction** — `/compact` reduces conversation history when it gets long.
 - 🧹 **Safe message formatting** — HTML escaping, fenced code blocks, logical boundary splitting, and long code truncation.
 - 📊 **Enhanced status** — `/status` shows busy state, provider/model, message/token stats, and preset lock state.
+- 🩺 **Health check** — `/health` reports uptime, messages, replies, and errors.
 - ♻️ **Persistent state** — chat → session mapping and user settings survive dsh restarts.
 - 🌐 **Proxy support** — automatically uses `HTTPS_PROXY` / `HTTP_PROXY` when available.
 - 🛡️ **Owner-only** — only the configured Telegram user ID can use the bot.
@@ -89,6 +90,7 @@ Then restart `dsh web`.
 - **Global guards**: unhandled rejections / exceptions are logged and kept from stopping the plugin when possible
 - **Startup self-check**: verifies Telegram API (`getMe`) and dsh API (`agentPresets.list`) on boot
 - **Status line keepalive**: long tasks rotate status text every 3s and show tool names during tool calls
+- **Queue persistence**: queued messages are written to `queue.json` and resumed after a dsh restart
 
 ## Configuration
 

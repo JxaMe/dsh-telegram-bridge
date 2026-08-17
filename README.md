@@ -22,6 +22,7 @@
 - 🗜️ **上下文压缩**：`/compact` 压缩过长的对话历史。
 - 🧹 **安全消息格式**：HTML 转义、代码块识别、按逻辑边界分段发送；超长代码块自动截断。
 - 📊 **增强状态**：`/status` 显示忙碌状态、provider/model、消息数与 token 统计、preset 锁定状态。
+- 🩺 **健康检查**：`/health` 显示运行时长、消息数、回复数、错误数。
 - ♻️ **状态持久化**：chat → session 映射和用户设置会在 dsh 重启后保留。
 - 🌐 **代理支持**：自动使用 `HTTPS_PROXY` / `HTTP_PROXY`。
 - 🛡️ **仅限 Owner**：只有配置的 Telegram 用户 ID 可以使用。
@@ -90,6 +91,7 @@ dsh --profile web --dump-config | grep dsh-telegram-bridge
 - **全局兜底**：未捕获的 Promise rejection / 异常会写入日志并尽量不中断运行
 - **启动自检**：启动时检查 Telegram API（`getMe`）与 dsh API（`agentPresets.list`），失败会写入日志
 - **状态行保活**：长任务期间状态行每 3 秒轮换文案，并在有工具调用时显示工具名
+- **队列持久化**：排队消息写入 `queue.json`，dsh 重启后自动恢复继续处理
 
 ## 配置
 
