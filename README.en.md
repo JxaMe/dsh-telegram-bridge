@@ -114,6 +114,7 @@ Open a private chat with your bot and send `/start`.
 | `/status` | Show session, queue, model, and preset status |
 | `/menu` | Open the settings panel |
 | `/compact` | Compact conversation history |
+| `/version` | Show current version and updates |
 | `/help` | Show command help |
 | `/commands` | Open the in-chat command menu |
 

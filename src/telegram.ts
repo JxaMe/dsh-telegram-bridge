@@ -12,6 +12,8 @@ import { QueueManager } from './queue.js';
 import { SessionManager } from './session.js';
 import { SettingsManager } from './settings.js';
 import { StateStore } from './state.js';
+import { checkLatestVersion } from './update-check.js';
+import { currentVersion } from './version.js';
 import type { PluginConfig } from './types.js';
 
 export interface TelegramDeps {
@@ -122,6 +124,7 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
       + '<b>/menu</b> - 打开设置面板（切换模型/思考强度/Preset）\n'
       + '<b>/compact</b> - 压缩对话历史\n'
       + '<b>/commands</b> - 打开聊天内命令菜单\n'
+      + '<b>/version</b> - 查看当前版本与最新版本\n'
       + '<b>/help</b> - 显示本帮助\n\n'
       + '💡 <b>提示</b>\n'
       + '• 直接发消息即可与 dsh 对话\n'
@@ -131,6 +134,15 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
     );
     await sendCommandMenu(bot, ctx.chat!.id, true);
     await ctx.reply(helpText, { parse_mode: 'HTML' });
+  });
+
+  bot.command('version', async (ctx) => {
+    const current = currentVersion();
+    const info = await checkLatestVersion(proxyUrl);
+    const text = info.hasUpdate
+      ? `当前版本：v${current}\n最新版本：v${info.latest}\n\n📢 有新版本可用，请更新插件。\n${info.url ?? 'https://github.com/JxaMe/dsh-telegram-bridge/releases'}`
+      : `当前版本：v${current}（已是最新）`;
+    await ctx.reply(text);
   });
 
   bot.command('commands', async (ctx) => {
@@ -479,6 +491,19 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
   });
 
   await bot.init();
+  void (async () => {
+    try {
+      const info = await checkLatestVersion(proxyUrl);
+      if (info.hasUpdate) {
+        await bot.api.sendMessage(
+          config.ownerId,
+          `📢 dsh-telegram-bridge 有新版本 v${info.latest}（当前 v${currentVersion()}）\n更新：${info.url ?? 'https://github.com/JxaMe/dsh-telegram-bridge/releases'}`,
+        );
+      }
+    } catch {
+      // Update notification is best-effort.
+    }
+  })();
   await setupCommandMenu(bot, config.ownerId, config.botToken);
   void bot.start({
     onStart: () => console.log('dsh-telegram-bridge started'),
@@ -675,6 +700,7 @@ async function setupCommandMenu(bot: Bot, ownerId: number, botToken: string): Pr
       { command: 'menu', description: '打开设置面板' },
       { command: 'compact', description: '压缩上下文' },
       { command: 'commands', description: '打开聊天内命令菜单' },
+      { command: 'version', description: '查看版本与更新' },
       { command: 'help', description: '查看命令帮助' },
     ]);
     await bot.api.setChatMenuButton({

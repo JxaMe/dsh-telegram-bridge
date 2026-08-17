@@ -114,6 +114,7 @@ dsh --profile web --dump-config | grep dsh-telegram-bridge
 | `/status` | 查看 session、队列、模型和 preset 状态 |
 | `/menu` | 打开设置面板 |
 | `/compact` | 压缩对话历史 |
+| `/version` | 查看当前版本与更新 |
 | `/help` | 显示命令帮助 |
 | `/commands` | 打开聊天内命令菜单 |
 
