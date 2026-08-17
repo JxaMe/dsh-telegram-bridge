@@ -5,7 +5,7 @@ import { EventForwarder } from './forwarder.js';
 import { PendingStatus } from './pending-status.js';
 import { createRpcId } from './rpc.js';
 import { decodeData, encodeData } from './callback.js';
-import { redactToken } from './security.js';
+import { friendlyError, redactToken } from './security.js';
 import { commandMenuKeyboard, effortsKeyboard, mainMenuKeyboard, modelsPageKeyboard, presetsKeyboard, settingsKeyboard } from './menu.js';
 import { QueueManager } from './queue.js';
 import { SessionManager } from './session.js';
@@ -41,7 +41,7 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
   const queue = new QueueManager(api, sessions, state, async (chatId, error) => {
     try {
       await pending.clear(bot, chatId);
-      await bot.api.sendMessage(chatId, `处理失败：${error instanceof Error ? error.message : String(error)}`);
+      await bot.api.sendMessage(chatId, `处理失败：${friendlyError(error)}`);
     } catch {
       // ignore report failures
     }
@@ -278,7 +278,7 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
       await ctx.editMessageText(panel.text, { reply_markup: panel.keyboard });
     } catch (error) {
       await ctx.answerCallbackQuery('切换失败');
-      await ctx.editMessageText(`切换模型失败：${error instanceof Error ? error.message : String(error)}`);
+      await ctx.editMessageText(`切换失败：${friendlyError(error, '模型')}`);
     }
   });
 
@@ -301,7 +301,7 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
       const page = effortsKeyboard(provider, model, efforts, current.reasoningEffort);
       await ctx.editMessageText(page.text, { reply_markup: page.keyboard });
     } catch (error) {
-      await ctx.editMessageText(`读取思考强度失败：${error instanceof Error ? error.message : String(error)}`);
+      await ctx.editMessageText(`读取失败：${friendlyError(error, '思考强度')}`);
     }
     await ctx.answerCallbackQuery();
   });
@@ -322,7 +322,7 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
       await ctx.editMessageText(panel.text, { reply_markup: panel.keyboard });
     } catch (error) {
       await ctx.answerCallbackQuery('切换失败');
-      await ctx.editMessageText(`切换思考强度失败：${error instanceof Error ? error.message : String(error)}`);
+      await ctx.editMessageText(`切换失败：${friendlyError(error, '思考强度')}`);
     }
   });
 
@@ -334,7 +334,7 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
       const page = presetsKeyboard(presets, currentPreset);
       await ctx.editMessageText(page.text, { reply_markup: page.keyboard });
     } catch (error) {
-      await ctx.editMessageText(`读取 preset 失败：${error instanceof Error ? error.message : String(error)}`);
+      await ctx.editMessageText(`读取失败：${friendlyError(error, 'Preset')}`);
     }
     await ctx.answerCallbackQuery();
   });
@@ -355,7 +355,7 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
       await ctx.editMessageText(panel.text, { reply_markup: panel.keyboard });
     } catch (error) {
       await ctx.answerCallbackQuery('切换失败');
-      await ctx.editMessageText(`切换 preset 失败：${error instanceof Error ? error.message : String(error)}`);
+      await ctx.editMessageText(`切换失败：${friendlyError(error, 'Preset')}`);
     }
   });
 
@@ -406,7 +406,7 @@ async function showModelsPage(
     const pageData = modelsPageKeyboard(models, current, page);
     await ctx.editMessageText(pageData.text, { reply_markup: pageData.keyboard });
   } catch (error) {
-    await ctx.editMessageText(`读取模型失败：${error instanceof Error ? error.message : String(error)}`);
+    await ctx.editMessageText(`读取失败：${friendlyError(error, '模型')}`);
   }
   await ctx.answerCallbackQuery();
 }
