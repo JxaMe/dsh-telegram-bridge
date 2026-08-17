@@ -143,6 +143,14 @@ export interface DshContext {
     agents: {
         get(sessionId: string): DshAgentLike | undefined;
     };
+    commands?: {
+        execute(agent: unknown, line: string, signal: AbortSignal): Promise<{
+            result: {
+                kind: string;
+                text?: string;
+            };
+        } | undefined>;
+    };
     logger: {
         warn(message: string): void;
         info?(message: string): void;

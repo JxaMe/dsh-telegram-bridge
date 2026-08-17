@@ -814,8 +814,24 @@ async function runCompact(
   if (!chat) {
     return '当前没有会话。';
   }
-  const compaction = ctx.get<{ compactNow(agent: unknown, signal: AbortSignal): Promise<unknown> }>('compaction');
   const agent = ctx.agents.get(chat.sessionId);
+  const commands = ctx.get<{ execute(agent: unknown, line: string, signal: AbortSignal): Promise<{ result: { kind: string; text?: string } } | undefined> }>('commands') ?? ctx.commands;
+  if (commands && agent) {
+    try {
+      const execution = await commands.execute(agent, '/compact', new AbortController().signal);
+      if (execution === undefined) {
+        return '当前环境没有可用的 /compact 命令。';
+      }
+      const result = execution.result;
+      if (result?.kind === 'success') {
+        return result.text ?? '压缩完成。';
+      }
+      return `压缩失败：${result?.text ?? '未知原因'}`;
+    } catch (error) {
+      return `压缩失败：${error instanceof Error ? error.message : String(error)}`;
+    }
+  }
+  const compaction = ctx.get<{ compactNow(agent: unknown, signal: AbortSignal): Promise<unknown> }>('compaction');
   if (compaction && agent) {
     try {
       await compaction.compactNow(agent, new AbortController().signal);
