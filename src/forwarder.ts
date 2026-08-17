@@ -4,6 +4,7 @@ import type { PendingStatus } from './pending-status.js';
 import type { QueueManager } from './queue.js';
 import type { StateStore } from './state.js';
 import { replyActionsKeyboard } from './menu.js';
+import type { Logger } from './logger.js';
 
 export class EventForwarder {
   private lastToolAt = new Map<number, number>();
@@ -17,18 +18,31 @@ export class EventForwarder {
     private onPendingClear?: (chatId: number) => void,
     private htmlFormatting = true,
     private statusLineEnabled = true,
+    private logger?: Logger,
   ) {}
 
   start(): void {
     this.ctx.on('session/event', async (session: unknown, event: unknown) => {
       const evt = event as DshSessionEventEnvelope;
-      if (evt?.type !== 'assistant/message') return;
       const sessionRecord = session as { id?: unknown } | null;
       const sessionId = typeof sessionRecord?.id === 'string' ? sessionRecord.id : undefined;
       if (!sessionId) return;
       const chatId = this.findChatId(sessionId);
       if (chatId === undefined) return;
-      this.updateStatusFromEvent(chatId, evt);
+
+      if (evt?.type !== 'assistant/message') {
+        this.updateStatusFromEvent(chatId, evt);
+        if (evt?.type === 'turn/end') {
+          if (this.queue.queueLength(chatId) > 0) {
+            this.pending.update(this.bot, chatId, '🐋 正在思考...');
+          } else {
+            await this.pending.clear(this.bot, chatId);
+            this.onPendingClear?.(chatId);
+          }
+        }
+        return;
+      }
+
       const data = evt.data ?? {};
       const text = extractText(data.message?.content ?? data.content);
       this.state.addAssistantMessage(chatId, data.usage);
@@ -37,20 +51,18 @@ export class EventForwarder {
         this.state.setChatState(chatId, { ...chatState, lastActiveAt: Date.now() });
       }
       if (!text) {
-        await this.pending.clear(this.bot, chatId);
-        if (this.queue.queueLength(chatId) > 0) {
-          const sent = await this.bot.api.sendMessage(chatId, '🐋 正在思考...');
-          this.pending.set(this.bot, chatId, sent.message_id, this.queue.queueLength(chatId));
-        } else {
-          this.onPendingClear?.(chatId);
-        }
+        // Empty assistant/message usually only carries usage stats.
+        // Keep the status line alive until turn/end so long tasks don't look stuck.
         return;
       }
       void this.sendToTelegram(chatId, text).catch((error) => {
         this.onPendingClear?.(chatId);
-        this.ctx.logger.warn(
-          `dsh-telegram-bridge 回复发送失败: ${error instanceof Error ? error.message : String(error)}`,
-        );
+        const message = `reply send failed: ${error instanceof Error ? error.message : String(error)}`;
+        if (this.logger) {
+          this.logger.error(message);
+        } else {
+          this.ctx.logger.warn(message);
+        }
       });
     });
   }

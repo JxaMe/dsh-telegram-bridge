@@ -13,6 +13,10 @@ export class Logger {
     this.filePath = path.join(logsDir, 'dsh-telegram-bridge.log');
   }
 
+  setDebugEnabled(enabled: boolean): void {
+    this.debugEnabled = enabled;
+  }
+
   info(message: string): void {
     this.write('info', message);
     if (this.debugEnabled) console.log(`[dsh-telegram-bridge] ${message}`);

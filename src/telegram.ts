@@ -14,6 +14,7 @@ import { SettingsManager } from './settings.js';
 import { StateStore } from './state.js';
 import { checkLatestVersion } from './update-check.js';
 import { currentVersion } from './version.js';
+import type { Logger } from './logger.js';
 import type { PluginConfig } from './types.js';
 
 export interface TelegramDeps {
@@ -21,6 +22,7 @@ export interface TelegramDeps {
   api: DshApi;
   config: PluginConfig;
   state: StateStore;
+  logger: Logger;
 }
 
 const HELP_TEXT = (
@@ -43,7 +45,7 @@ const HELP_TEXT = (
 );
 
 export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => Promise<void> }> {
-  const { ctx: hostCtx, api, config, state } = deps;
+  const { ctx: hostCtx, api, config, state, logger } = deps;
   const envProxy = process.env.HTTPS_PROXY || process.env.https_proxy || process.env.HTTP_PROXY || process.env.http_proxy || '';
   const proxyUrl = config.proxyEnabled === false
     ? ''
@@ -51,7 +53,7 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
       ? (config.proxyUrl || envProxy)
       : envProxy;
   const debugLog = (message: string) => {
-    if (config.debugLogging) console.log(`[dsh-telegram-bridge] ${message}`);
+    logger.debug(message);
   };
   const bot = proxyUrl
     ? new Bot(config.botToken, {
@@ -62,7 +64,7 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
     : new Bot(config.botToken);
 
   bot.catch((err) => {
-    console.error('dsh-telegram-bridge middleware error:', redactToken(err.error, config.botToken));
+    logger.error(`middleware error: ${logger.redact(err.error, config.botToken)}`);
   });
 
   const typingEnabled = config.typingIndicator !== false;
@@ -578,11 +580,11 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
       // Update notification is best-effort.
     }
   })();
-  await setupCommandMenu(bot, config.ownerId, config.botToken);
+  await setupCommandMenu(bot, config.ownerId, config.botToken, logger);
   void bot.start({
     onStart: () => debugLog('Telegram bot started'),
   }).catch((error) => {
-    console.error('dsh-telegram-bridge stopped with error', redactToken(error, config.botToken));
+    logger.error(`Telegram bot stopped with error: ${logger.redact(error, config.botToken)}`);
   });
 
   return {
@@ -796,7 +798,7 @@ async function runCompact(
   return '已请求压缩。';
 }
 
-async function setupCommandMenu(bot: Bot, ownerId: number, botToken: string): Promise<void> {
+async function setupCommandMenu(bot: Bot, ownerId: number, botToken: string, logger: Logger): Promise<void> {
   const commands = [
     { command: 'start', description: '显示主菜单和上手引导' },
     { command: 'new', description: '开始新对话' },
@@ -831,6 +833,6 @@ async function setupCommandMenu(bot: Bot, ownerId: number, botToken: string): Pr
       menu_button: { type: 'commands' },
     });
   } catch (error) {
-    console.error('Failed to setup command menu', redactToken(error, botToken));
+    logger.error(`Failed to setup command menu: ${logger.redact(error, botToken)}`);
   }
 }

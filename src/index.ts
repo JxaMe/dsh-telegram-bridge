@@ -1,5 +1,6 @@
 import { defaultDataDir, ensureDataDir, loadConfig, writeExampleConfig } from './config.js';
 import type { DshContext } from './dsh-types.js';
+import { Logger } from './logger.js';
 import { StateStore } from './state.js';
 import { startTelegram } from './telegram.js';
 import { registerWebSettings } from './web-settings.js';
@@ -13,6 +14,7 @@ export function apply(ctx: DshContext): void {
   ensureDataDir(dataDir);
   writeExampleConfig(dataDir);
 
+  const logger = new Logger(dataDir);
   const state = new StateStore(dataDir);
   registerWebSettings(ctx, dataDir);
 
@@ -26,10 +28,12 @@ export function apply(ctx: DshContext): void {
     return;
   }
 
+  logger.setDebugEnabled(config.debugLogging === true);
+
   let stopFn: (() => Promise<void>) | undefined;
   let disposed = false;
 
-  void startTelegram({ ctx, api: ctx.apiProxy, config, state })
+  void startTelegram({ ctx, api: ctx.apiProxy, config, state, logger })
     .then((handle) => {
       if (disposed) {
         void handle.stop();
@@ -38,8 +42,8 @@ export function apply(ctx: DshContext): void {
       }
     })
     .catch((error) => {
-      ctx.logger.warn(
-        `dsh-telegram-bridge 启动失败: ${error instanceof Error ? error.message : String(error)}。请确认 botToken 有效、ownerId 正确，并检查 Telegram API 网络/代理。`,
+      logger.error(
+        `startup failed: ${error instanceof Error ? error.message : String(error)}`,
       );
     });
 
