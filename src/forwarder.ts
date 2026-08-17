@@ -157,10 +157,35 @@ function renderBlocks(blocks: TextBlock[]): string {
   return blocks.map(renderBlock).filter(Boolean).join('\n');
 }
 
+function formatPlainText(text: string): string {
+  const parts: string[] = [];
+  let last = 0;
+  const re = /`([^`]+)`|(https?:\/\/[^\s<>()"]+)/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > last) {
+      parts.push(escapeHtml(text.slice(last, m.index)));
+    }
+    if (m[1] !== undefined) {
+      // Inline code
+      parts.push(`<code>${escapeHtml(m[1])}</code>`);
+    } else {
+      // Safe URL
+      const url = m[2];
+      parts.push(`<a href="${url}">${escapeHtml(url)}</a>`);
+    }
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) {
+    parts.push(escapeHtml(text.slice(last)));
+  }
+  return parts.join('');
+}
+
 function renderBlock(block: TextBlock): string {
   switch (block.type) {
     case 'plain':
-      return escapeHtml(block.text ?? '');
+      return formatPlainText(block.text ?? '');
     case 'code':
       return renderCodeBlock(block);
     case 'html':
@@ -171,7 +196,7 @@ function renderBlock(block: TextBlock): string {
 }
 
 function renderCodeBlock(block: TextBlock): string {
-  const language = block.lang ? `<b>${escapeHtml(block.lang)}</b>\n` : '';
+  const language = block.lang ? `<code>${escapeHtml(block.lang)}</code>\n` : '';
   return `<pre>${language}${escapeHtml(block.text ?? '')}</pre>`;
 }
 
@@ -190,11 +215,11 @@ function chunkBlocks(blocks: TextBlock[], limit: number): string[] {
     if (block.type === 'plain') {
       const lines = (block.text ?? '').split('\n');
       for (const line of lines) {
-        const renderedLine = escapeHtml(line);
+        const renderedLine = formatPlainText(line);
         if (line.length > limit) {
           flush();
           for (let i = 0; i < line.length; i += limit) {
-            chunks.push(escapeHtml(line.slice(i, i + limit)));
+            chunks.push(formatPlainText(line.slice(i, i + limit)));
           }
           continue;
         }
