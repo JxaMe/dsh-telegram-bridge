@@ -66,6 +66,7 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
     : new Bot(config.botToken);
 
   bot.catch((err) => {
+    incrError();
     logger.error(`middleware error: ${logger.redact(err.error, config.botToken)}`);
   });
 
@@ -114,6 +115,7 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
         // Notification failure should not break session creation.
       }
     },
+    config.maxSessionsPerChat ?? 5,
   );
   const errorText = (error: unknown) =>
     config.errorDisplayMode === 'friendly'
@@ -593,7 +595,9 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
       return;
     }
     debugLog(`message queued for chat ${ctx.chat.id}`);
-    if (!pending.has(ctx.chat.id)) {
+    if (pending.has(ctx.chat.id)) {
+      pending.setQueueLength(ctx.chat.id, queue.queueLength(ctx.chat.id));
+    } else {
       const sent = await ctx.reply('🐋 正在思考...');
       pending.set(bot, ctx.chat.id, sent.message_id);
       startTyping(bot, ctx.chat.id, typingEnabled);

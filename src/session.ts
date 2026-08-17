@@ -10,6 +10,7 @@ export class SessionManager {
     private projectRoot: string,
     private defaults: Partial<ChatSettings> = {},
     private onCreated?: (chatId: number, sessionId: string) => void,
+    private maxSessionsPerChat = 5,
   ) {}
 
   async ensureSession(chatId: number, settings: ChatSettings): Promise<string> {
@@ -48,6 +49,7 @@ export class SessionManager {
       }
     }
     this.state.addSession(chatId, sessionId);
+    this.state.trimSessions(chatId, this.maxSessionsPerChat);
     if (Object.keys(mergedSettings).length > 0) {
       this.state.setChatSettings(chatId, mergedSettings);
     }

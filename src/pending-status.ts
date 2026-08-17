@@ -74,6 +74,10 @@ export class PendingStatus {
     this.editTimers.set(chatId, timer);
   }
 
+  setQueueLength(chatId: number, length: number): void {
+    this.queueLengths.set(chatId, length);
+  }
+
   setActiveTool(chatId: number, name: string): void {
     this.activeTools.set(chatId, name);
   }
@@ -193,11 +197,7 @@ export class PendingStatus {
       if (queueLen > 0) {
         text += ` · 队列还有 ${queueLen} 条`;
       }
-      try {
-        await bot.api.editMessageText(chatId, messageId, text);
-      } catch {
-        // Ignore edit failures; the message may have been deleted already.
-      }
+      this.update(bot, chatId, text);
 
       this.scheduleNext(bot, chatId, startedAt);
     }, delay);

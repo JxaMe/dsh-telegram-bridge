@@ -10,6 +10,7 @@ export class QueueManager {
   private queues = new Map<number, QueueItem[]>();
   private processing = new Map<number, boolean>();
   private failedItems = new Map<number, Map<string, QueueItem>>();
+  private inFlight = new Map<number, QueueItem[]>();
 
   constructor(
     private api: DshApi,
@@ -72,11 +73,20 @@ export class QueueManager {
     try {
       const file = path.join(this.dataDir, 'queue.json');
       if (!existsSync(file)) return;
-      const parsed = JSON.parse(readFileSync(file, 'utf8')) as Record<string, QueueItem[]>;
-      for (const [chatId, items] of Object.entries(parsed)) {
+      const parsed = JSON.parse(readFileSync(file, 'utf8')) as {
+        pending?: Record<string, QueueItem[]>;
+        inFlight?: Record<string, QueueItem[]>;
+      };
+      for (const [chatId, items] of Object.entries(parsed.pending ?? {})) {
         if (Array.isArray(items)) {
           this.queues.set(Number(chatId), items.filter((item) => item && typeof item.text === 'string'));
         }
+      }
+      for (const [chatId, items] of Object.entries(parsed.inFlight ?? {})) {
+        if (!Array.isArray(items)) continue;
+        const valid = items.filter((item) => item && typeof item.text === 'string');
+        const existing = this.queues.get(Number(chatId)) ?? [];
+        this.queues.set(Number(chatId), [...valid, ...existing]);
       }
     } catch {
       // A corrupted queue file is ignored; the queue just starts empty.
@@ -89,15 +99,25 @@ export class QueueManager {
       mkdirSync(this.dataDir, { recursive: true });
       const file = path.join(this.dataDir, 'queue.json');
       const tmp = `${file}.tmp`;
-      const data: Record<string, QueueItem[]> = {};
+      const pending: Record<string, QueueItem[]> = {};
       for (const [chatId, items] of this.queues) {
-        if (items.length > 0) data[String(chatId)] = items;
+        if (items.length > 0) pending[String(chatId)] = items;
       }
-      writeFileSync(tmp, JSON.stringify(data, null, 2) + '\n', 'utf8');
+      const inFlight: Record<string, QueueItem[]> = {};
+      for (const [chatId, items] of this.inFlight) {
+        if (items.length > 0) inFlight[String(chatId)] = items;
+      }
+      writeFileSync(tmp, JSON.stringify({ pending, inFlight }, null, 2) + '\n', 'utf8');
       renameSync(tmp, file);
     } catch {
       // Persistence is best-effort; never break the queue on write failure.
     }
+  }
+
+  private removeFromInFlight(chatId: number, item: QueueItem): void {
+    const list = this.inFlight.get(chatId) ?? [];
+    this.inFlight.set(chatId, list.filter((entry) => entry !== item));
+    if (this.inFlight.get(chatId)?.length === 0) this.inFlight.delete(chatId);
   }
 
   private async drain(chatId: number): Promise<void> {
@@ -109,6 +129,9 @@ export class QueueManager {
         const item = queue.shift();
         if (!item) break;
         this.queues.set(chatId, queue);
+        const inFlight = this.inFlight.get(chatId) ?? [];
+        inFlight.push(item);
+        this.inFlight.set(chatId, inFlight);
         this.persistQueues();
         try {
           const settings: ChatSettings = this.state.getChatSettings(chatId);
@@ -135,12 +158,16 @@ export class QueueManager {
           if (!res.result.ok) {
             throw new Error(`prompt failed: ${JSON.stringify(res.result.error)}`);
           }
+          this.removeFromInFlight(chatId, item);
+          this.persistQueues();
         } catch (error) {
+          this.removeFromInFlight(chatId, item);
           const failureId = createRpcId();
           const map = this.failedItems.get(chatId) ?? new Map<string, QueueItem>();
           map.set(failureId, item);
           this.failedItems.set(chatId, map);
           this.onError?.(chatId, error, failureId);
+          this.persistQueues();
         }
       }
     } finally {

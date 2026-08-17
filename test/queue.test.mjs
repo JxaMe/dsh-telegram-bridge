@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { QueueManager } from '../lib/queue.js';
@@ -62,5 +62,24 @@ test('QueueManager retries with a fresh session on session-not-found', async () 
   assert.equal(resets, 1);
   assert.equal(promptCalls, 2);
   assert.equal(queue.queueLength(1), 0);
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('QueueManager persists in-flight item for restart recovery', async () => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'dsh-bridge-queue-persist-'));
+  const store = new StateStore(dir);
+  const never = new Promise(() => {});
+  const sessions = { ensureSession: () => never };
+  const api = { sessions: { prompt: async () => ({ result: { ok: true, value: { accepted: true } } }) } };
+  const q1 = new QueueManager(api, sessions, store, undefined, 10, dir);
+  q1.enqueue(1, 'hello');
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  const file = path.join(dir, 'queue.json');
+  const afterFirst = JSON.parse(readFileSync(file, 'utf8'));
+  assert.ok(afterFirst.inFlight['1'].length >= 1);
+  const q2 = new QueueManager(api, sessions, store, undefined, 10, dir);
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  const afterSecond = JSON.parse(readFileSync(file, 'utf8'));
+  assert.ok((afterSecond.inFlight['1'] ?? []).length >= 1);
   rmSync(dir, { recursive: true, force: true });
 });

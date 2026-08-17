@@ -12,6 +12,7 @@ export declare class QueueManager {
     private queues;
     private processing;
     private failedItems;
+    private inFlight;
     constructor(api: DshApi, sessions: SessionManager, state: StateStore, onError?: ((chatId: number, error: unknown, failureId: string) => void) | undefined, maxQueueSize?: number, dataDir?: string | undefined);
     enqueue(chatId: number, text: string): boolean;
     clear(chatId: number): void;
@@ -25,5 +26,6 @@ export declare class QueueManager {
     clearFailedItem(chatId: number, failureId: string): void;
     private loadQueues;
     private persistQueues;
+    private removeFromInFlight;
     private drain;
 }

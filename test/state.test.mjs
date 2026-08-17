@@ -68,3 +68,14 @@ test('StateStore recovers from corrupted main file via backup', () => {
   assert.equal(reloaded.getChatState(1).sessionId, 's1');
   rmSync(dir, { recursive: true, force: true });
 });
+
+test('StateStore trims sessions to max and keeps active session', () => {
+  const { dir, store } = makeStore();
+  store.addSession(1, 's1', 'a');
+  store.addSession(1, 's2', 'b');
+  store.addSession(1, 's3', 'c');
+  store.trimSessions(1, 2);
+  assert.equal(store.listChatSessions(1).length, 2);
+  assert.equal(store.getChatState(1).sessionId, 's3');
+  rmSync(dir, { recursive: true, force: true });
+});

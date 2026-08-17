@@ -4,7 +4,7 @@ import type { PendingStatus } from './pending-status.js';
 import type { QueueManager } from './queue.js';
 import type { StateStore } from './state.js';
 import { replyActionsKeyboard } from './menu.js';
-import { incrReplySent } from './metrics.js';
+import { incrError, incrReplySent } from './metrics.js';
 import type { Logger } from './logger.js';
 
 export class EventForwarder {
@@ -58,6 +58,7 @@ export class EventForwarder {
       }
       void this.sendToTelegram(chatId, text).catch((error) => {
         this.onPendingClear?.(chatId);
+        incrError();
         const message = `reply send failed: ${error instanceof Error ? error.message : String(error)}`;
         if (this.logger) {
           this.logger.error(message);
@@ -105,6 +106,7 @@ export class EventForwarder {
     const state = this.state.loadState();
     for (const [chatId, chat] of Object.entries(state.chats)) {
       if (chat.sessionId === sessionId) return Number(chatId);
+      if (chat.sessions?.some((entry) => entry.sessionId === sessionId)) return Number(chatId);
     }
     return undefined;
   }

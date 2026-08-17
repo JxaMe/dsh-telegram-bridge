@@ -113,14 +113,18 @@ export class StateStore {
         const last = entry.lastActiveAt ?? entry.createdAt;
         return last >= cutoff;
       });
-      if (!sessions.some((entry) => entry.sessionId === chat.sessionId)) {
+      const activeStillPresent = sessions.some((entry) => entry.sessionId === chat.sessionId);
+      let activeChanged = false;
+      if (!activeStillPresent) {
         const fallback = sessions[sessions.length - 1];
         if (fallback) {
           chat.sessionId = fallback.sessionId;
           chat.createdAt = fallback.createdAt;
           chat.lastActiveAt = fallback.lastActiveAt;
+          activeChanged = true;
         }
       }
+      if (sessions.length === chat.sessions.length && !activeChanged) continue;
       chat.sessions = sessions;
       changed = true;
     }

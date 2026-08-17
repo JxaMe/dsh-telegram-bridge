@@ -19,7 +19,6 @@ export function apply(ctx: DshContext): void {
   const logger = new Logger(dataDir);
   installGlobalHandlers(logger);
   const state = new StateStore(dataDir);
-  state.pruneOldSessions(7);
   registerWebSettings(ctx, dataDir);
 
   let config: PluginConfig;
@@ -33,6 +32,7 @@ export function apply(ctx: DshContext): void {
   }
 
   logger.setDebugEnabled(config.debugLogging === true);
+  state.pruneOldSessions(7);
 
   let stopFn: (() => Promise<void>) | undefined;
   let disposed = false;
