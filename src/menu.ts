@@ -16,11 +16,11 @@ export function mainMenuKeyboard(): InlineKeyboard {
     .text('命令菜单', 'command_menu');
 }
 
-export function settingsKeyboard(): InlineKeyboard {
+export function settingsKeyboard(settings?: ChatSettings): InlineKeyboard {
   return new InlineKeyboard()
-    .text('模型', 'models')
-    .text('思考强度', 'efforts')
-    .text('Agent preset', 'presets')
+    .text(`模型：${settings?.model ?? '默认'}`, 'models')
+    .text(`思考强度：${settings?.reasoningEffort ?? '默认'}`, 'efforts')
+    .text(`Preset：${settings?.agentPreset ?? '默认'}`, 'presets')
     .row()
     .text('返回', 'back');
 }

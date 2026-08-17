@@ -104,7 +104,7 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
   });
 
   bot.command('menu', async (ctx) => {
-    await ctx.reply('设置面板', { reply_markup: settingsKeyboard() });
+    await ctx.reply('设置面板', { reply_markup: settingsKeyboard(state.getChatSettings(ctx.chat!.id)) });
   });
 
   bot.command('compact', async (ctx) => {
@@ -152,7 +152,7 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
   });
 
   bot.callbackQuery('menu', async (ctx) => {
-    await ctx.editMessageText('设置面板', { reply_markup: settingsKeyboard() });
+    await ctx.editMessageText('设置面板', { reply_markup: settingsKeyboard(state.getChatSettings(ctx.chat!.id)) });
     await ctx.answerCallbackQuery();
   });
 
@@ -192,7 +192,7 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
         return;
       }
       if (command === 'cmd_menu') {
-        await ctx.reply('设置面板', { reply_markup: settingsKeyboard() });
+        await ctx.reply('设置面板', { reply_markup: settingsKeyboard(state.getChatSettings(chatId)) });
         await ctx.answerCallbackQuery();
         return;
       }
@@ -241,7 +241,7 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
       const sessionId = await sessions.ensureSession(chatId, state.getChatSettings(chatId));
       await settings.selectModel(chatId, sessionId, provider, model);
       await ctx.answerCallbackQuery('已切换模型');
-      await ctx.editMessageText(`已选择模型：${provider}/${model}`);
+      await ctx.editMessageText('设置面板', { reply_markup: settingsKeyboard(state.getChatSettings(chatId)) });
     } catch (error) {
       await ctx.answerCallbackQuery('切换失败');
       await ctx.editMessageText(`切换模型失败：${error instanceof Error ? error.message : String(error)}`);
@@ -284,7 +284,7 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
       const sessionId = await sessions.ensureSession(chatId, state.getChatSettings(chatId));
       await settings.selectModel(chatId, sessionId, provider, model, effort);
       await ctx.answerCallbackQuery('已切换思考强度');
-      await ctx.editMessageText(`已选择思考强度：${effort}`);
+      await ctx.editMessageText('设置面板', { reply_markup: settingsKeyboard(state.getChatSettings(chatId)) });
     } catch (error) {
       await ctx.answerCallbackQuery('切换失败');
       await ctx.editMessageText(`切换思考强度失败：${error instanceof Error ? error.message : String(error)}`);
@@ -316,7 +316,7 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
       const sessionId = await sessions.ensureSession(chatId, state.getChatSettings(chatId));
       await settings.selectPreset(chatId, sessionId, preset);
       await ctx.answerCallbackQuery('已切换 preset');
-      await ctx.editMessageText(`已选择 preset：${preset}`);
+      await ctx.editMessageText('设置面板', { reply_markup: settingsKeyboard(state.getChatSettings(chatId)) });
     } catch (error) {
       await ctx.answerCallbackQuery('切换失败');
       await ctx.editMessageText(`切换 preset 失败：${error instanceof Error ? error.message : String(error)}`);
