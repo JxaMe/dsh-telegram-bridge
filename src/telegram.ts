@@ -57,7 +57,15 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
   });
 
   bot.command('start', async (ctx) => {
-    await ctx.reply('dsh-telegram-bridge 已启动', { reply_markup: mainMenuKeyboard() });
+    await ctx.reply(
+      'dsh-telegram-bridge 已启动 🚀\n\n' +
+      '直接发送消息即可与 dsh 对话。\n' +
+      '/menu - 切换模型、思考强度、Preset\n' +
+      '/commands - 打开命令菜单\n' +
+      '/interrupt - 打断当前任务\n' +
+      '/status - 查看状态统计',
+      { reply_markup: mainMenuKeyboard() },
+    );
   });
 
   bot.command('help', async (ctx) => {
@@ -99,6 +107,11 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
 
   bot.command('status', async (ctx) => {
     const chatId = ctx.chat!.id;
+    const chat = state.getChatState(chatId);
+    if (!chat?.sessionId) {
+      await ctx.reply('还没有会话，直接发消息即可开始对话。');
+      return;
+    }
     const text = await statusText(chatId, hostCtx, state, queue);
     await ctx.reply(text);
   });
@@ -110,6 +123,11 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
 
   bot.command('compact', async (ctx) => {
     const chatId = ctx.chat!.id;
+    const chat = state.getChatState(chatId);
+    if (!chat?.sessionId) {
+      await ctx.reply('还没有会话，无法压缩。');
+      return;
+    }
     await runCompact(chatId, hostCtx, api, state, async (id, text) => {
       await bot.api.sendMessage(id, text);
     });
@@ -147,6 +165,12 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
 
   bot.callbackQuery('status', async (ctx) => {
     const chatId = ctx.chat!.id;
+    const chat = state.getChatState(chatId);
+    if (!chat?.sessionId) {
+      await ctx.reply('还没有会话，直接发消息即可开始对话。');
+      await ctx.answerCallbackQuery();
+      return;
+    }
     const text = await statusText(chatId, hostCtx, state, queue);
     await ctx.reply(text);
     await ctx.answerCallbackQuery();
@@ -189,6 +213,12 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
         return;
       }
       if (command === 'cmd_status') {
+        const chat = state.getChatState(chatId);
+        if (!chat?.sessionId) {
+          await ctx.reply('还没有会话，直接发消息即可开始对话。');
+          await ctx.answerCallbackQuery();
+          return;
+        }
         await ctx.reply(await statusText(chatId, hostCtx, state, queue));
         await ctx.answerCallbackQuery();
         return;
