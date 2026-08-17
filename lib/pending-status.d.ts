@@ -7,8 +7,9 @@ export declare class PendingStatus {
     private messageIds;
     private timers;
     private startedAt;
+    private queueLengths;
     has(chatId: number): boolean;
-    set(bot: Bot, chatId: number, messageId: number): void;
+    set(bot: Bot, chatId: number, messageId: number, queueLength?: number): void;
     clear(bot: Bot, chatId: number): Promise<void>;
     private clearTimer;
     private scheduleNext;
