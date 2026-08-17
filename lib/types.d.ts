@@ -13,6 +13,7 @@ export interface ChatSettings {
     model?: string;
     reasoningEffort?: string;
     agentPreset?: string;
+    agentPresetName?: string;
 }
 export interface ChatStats {
     userMessages: number;

@@ -104,7 +104,8 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
   });
 
   bot.command('menu', async (ctx) => {
-    await ctx.reply('设置面板', { reply_markup: settingsKeyboard(state.getChatSettings(ctx.chat!.id)) });
+    const panel = await settingsPanel(state, settings, ctx.chat!.id);
+    await ctx.reply(panel.text, { reply_markup: panel.keyboard });
   });
 
   bot.command('compact', async (ctx) => {
@@ -152,7 +153,8 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
   });
 
   bot.callbackQuery('menu', async (ctx) => {
-    await ctx.editMessageText('设置面板', { reply_markup: settingsKeyboard(state.getChatSettings(ctx.chat!.id)) });
+    const panel = await settingsPanel(state, settings, ctx.chat!.id);
+    await ctx.editMessageText(panel.text, { reply_markup: panel.keyboard });
     await ctx.answerCallbackQuery();
   });
 
@@ -192,7 +194,8 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
         return;
       }
       if (command === 'cmd_menu') {
-        await ctx.reply('设置面板', { reply_markup: settingsKeyboard(state.getChatSettings(chatId)) });
+        const panel = await settingsPanel(state, settings, chatId);
+        await ctx.reply(panel.text, { reply_markup: panel.keyboard });
         await ctx.answerCallbackQuery();
         return;
       }
@@ -241,7 +244,8 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
       const sessionId = await sessions.ensureSession(chatId, state.getChatSettings(chatId));
       await settings.selectModel(chatId, sessionId, provider, model);
       await ctx.answerCallbackQuery('已切换模型');
-      await ctx.editMessageText('设置面板', { reply_markup: settingsKeyboard(state.getChatSettings(chatId)) });
+      const panel = await settingsPanel(state, settings, chatId);
+      await ctx.editMessageText(panel.text, { reply_markup: panel.keyboard });
     } catch (error) {
       await ctx.answerCallbackQuery('切换失败');
       await ctx.editMessageText(`切换模型失败：${error instanceof Error ? error.message : String(error)}`);
@@ -284,7 +288,8 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
       const sessionId = await sessions.ensureSession(chatId, state.getChatSettings(chatId));
       await settings.selectModel(chatId, sessionId, provider, model, effort);
       await ctx.answerCallbackQuery('已切换思考强度');
-      await ctx.editMessageText('设置面板', { reply_markup: settingsKeyboard(state.getChatSettings(chatId)) });
+      const panel = await settingsPanel(state, settings, chatId);
+      await ctx.editMessageText(panel.text, { reply_markup: panel.keyboard });
     } catch (error) {
       await ctx.answerCallbackQuery('切换失败');
       await ctx.editMessageText(`切换思考强度失败：${error instanceof Error ? error.message : String(error)}`);
@@ -316,7 +321,8 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
       const sessionId = await sessions.ensureSession(chatId, state.getChatSettings(chatId));
       await settings.selectPreset(chatId, sessionId, preset);
       await ctx.answerCallbackQuery('已切换 preset');
-      await ctx.editMessageText('设置面板', { reply_markup: settingsKeyboard(state.getChatSettings(chatId)) });
+      const panel = await settingsPanel(state, settings, chatId);
+      await ctx.editMessageText(panel.text, { reply_markup: panel.keyboard });
     } catch (error) {
       await ctx.answerCallbackQuery('切换失败');
       await ctx.editMessageText(`切换 preset 失败：${error instanceof Error ? error.message : String(error)}`);
@@ -373,6 +379,27 @@ async function showModelsPage(
     await ctx.editMessageText(`读取模型失败：${error instanceof Error ? error.message : String(error)}`);
   }
   await ctx.answerCallbackQuery();
+}
+
+async function settingsPanel(
+  state: StateStore,
+  settings: SettingsManager,
+  chatId: number,
+): Promise<{ text: string; keyboard: InlineKeyboard }> {
+  const chatSettings = state.getChatSettings(chatId);
+  const display = { ...chatSettings };
+  if (chatSettings.agentPreset) {
+    try {
+      const presets = await settings.listPresets();
+      const preset = presets.find((entry) => entry.id === chatSettings.agentPreset);
+      if (preset?.name) {
+        display.agentPresetName = preset.name;
+      }
+    } catch {
+      // Keep the stored id/name; settings panel should still open.
+    }
+  }
+  return { text: '设置面板', keyboard: settingsKeyboard(display) };
 }
 
 async function sendCommandMenu(bot: Bot, chatId: number, pin = false): Promise<void> {
