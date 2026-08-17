@@ -1,6 +1,7 @@
 import type { DshApi } from './dsh-types.js';
 import type { SessionManager } from './session.js';
 import type { StateStore } from './state.js';
+import type { QueueItem } from './types.js';
 export declare class QueueManager {
     private api;
     private sessions;
@@ -9,10 +10,13 @@ export declare class QueueManager {
     private maxQueueSize;
     private queues;
     private processing;
+    private failedItems;
     constructor(api: DshApi, sessions: SessionManager, state: StateStore, onError?: ((chatId: number, error: unknown) => void) | undefined, maxQueueSize?: number);
     enqueue(chatId: number, text: string): boolean;
     clear(chatId: number): void;
     queueLength(chatId: number): number;
     isProcessing(chatId: number): boolean;
+    getFailedItem(chatId: number): QueueItem | undefined;
+    clearFailedItem(chatId: number): void;
     private drain;
 }

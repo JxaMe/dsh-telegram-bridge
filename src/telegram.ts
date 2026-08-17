@@ -41,7 +41,11 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
   const queue = new QueueManager(api, sessions, state, async (chatId, error) => {
     try {
       await pending.clear(bot, chatId);
-      await bot.api.sendMessage(chatId, `处理失败：${friendlyError(error)}`);
+      const failed = queue.getFailedItem(chatId);
+      const keyboard = failed ? new InlineKeyboard().text('🔄 重试', 'retry_failed') : undefined;
+      await bot.api.sendMessage(chatId, `处理失败：${friendlyError(error)}`, {
+        reply_markup: keyboard,
+      });
     } catch {
       // ignore report failures
     }
@@ -185,6 +189,27 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
   bot.callbackQuery('back', async (ctx) => {
     await ctx.editMessageText('快捷操作', { reply_markup: mainMenuKeyboard() });
     await ctx.answerCallbackQuery();
+  });
+
+  bot.callbackQuery('retry_failed', async (ctx) => {
+    const chatId = ctx.chat!.id;
+    const failed = queue.getFailedItem(chatId);
+    if (!failed) {
+      await ctx.answerCallbackQuery('没有可重试的失败消息');
+      return;
+    }
+    queue.clearFailedItem(chatId);
+    const accepted = queue.enqueue(chatId, failed.text);
+    if (!accepted) {
+      await ctx.answerCallbackQuery('队列已满，无法重试');
+      return;
+    }
+    await ctx.answerCallbackQuery('已重试');
+    if (!pending.has(chatId)) {
+      const sent = await bot.api.sendMessage(chatId, '🐋 Deep diving...');
+      pending.set(bot, chatId, sent.message_id, queue.queueLength(chatId));
+      startTyping(bot, chatId);
+    }
   });
 
   bot.callbackQuery('command_menu', async (ctx) => {
@@ -440,6 +465,29 @@ async function sendCommandMenu(bot: Bot, chatId: number, pin = false): Promise<v
     } catch {
       // Private chats may not allow bots to pin messages; the menu is still sent.
     }
+  }
+}
+
+const typingTimers = new Map<number, ReturnType<typeof setInterval>>();
+
+function startTyping(bot: Bot, chatId: number): void {
+  const existing = typingTimers.get(chatId);
+  if (existing) return;
+  const interval = setInterval(async () => {
+    try {
+      await bot.api.sendChatAction(chatId, 'typing');
+    } catch {
+      // ignore
+    }
+  }, 5000);
+  typingTimers.set(chatId, interval);
+}
+
+function stopTyping(chatId: number): void {
+  const timer = typingTimers.get(chatId);
+  if (timer) {
+    clearInterval(timer);
+    typingTimers.delete(chatId);
   }
 }
 

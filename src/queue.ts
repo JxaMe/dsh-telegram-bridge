@@ -7,6 +7,7 @@ import type { ChatSettings, QueueItem } from './types.js';
 export class QueueManager {
   private queues = new Map<number, QueueItem[]>();
   private processing = new Map<number, boolean>();
+  private failedItems = new Map<number, QueueItem>();
 
   constructor(
     private api: DshApi,
@@ -37,6 +38,14 @@ export class QueueManager {
 
   isProcessing(chatId: number): boolean {
     return this.processing.get(chatId) ?? false;
+  }
+
+  getFailedItem(chatId: number): QueueItem | undefined {
+    return this.failedItems.get(chatId);
+  }
+
+  clearFailedItem(chatId: number): void {
+    this.failedItems.delete(chatId);
   }
 
   private async drain(chatId: number): Promise<void> {
@@ -74,6 +83,7 @@ export class QueueManager {
             throw new Error(`prompt failed: ${JSON.stringify(res.result.error)}`);
           }
         } catch (error) {
+          this.failedItems.set(chatId, item);
           this.onError?.(chatId, error);
         }
       }
