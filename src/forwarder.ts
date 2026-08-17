@@ -56,7 +56,8 @@ export class EventForwarder {
         // Keep the status line alive until turn/end so long tasks don't look stuck.
         return;
       }
-      void this.sendToTelegram(chatId, text).catch((error) => {
+      void this.sendToTelegram(chatId, text).catch(async (error) => {
+        await this.pending.clear(this.bot, chatId);
         this.onPendingClear?.(chatId);
         incrError();
         const message = `reply send failed: ${error instanceof Error ? error.message : String(error)}`;
@@ -112,7 +113,9 @@ export class EventForwarder {
   }
 
   private async sendToTelegram(chatId: number, text: string): Promise<void> {
-    await this.pending.clear(this.bot, chatId);
+    // Do NOT clear the status line here: an assistant/message may be an
+    // intermediate acknowledgement while the agent keeps working. Only
+    // turn/end (or a real terminal state) clears it.
     const chunks = splitTelegramMessage(text);
     const showActions = this.queue.queueLength(chatId) === 0 && shouldShowQuickActions(text);
     const isLastChunk = (index: number) => index === chunks.length - 1 && showActions;
@@ -129,9 +132,8 @@ export class EventForwarder {
     if (this.queue.queueLength(chatId) > 0) {
       const sent = await this.bot.api.sendMessage(chatId, '🐋 正在思考...');
       this.pending.set(this.bot, chatId, sent.message_id, this.queue.queueLength(chatId));
-    } else {
-      this.onPendingClear?.(chatId);
     }
+    // If no more queued items, keep the existing status until turn/end.
   }
 
   private async sendWithRetry(fn: () => Promise<unknown>): Promise<void> {
