@@ -6,7 +6,7 @@ A plugin that bridges Telegram private chats to [DeepSeek Harness](https://githu
 
 Talk to your dsh agent directly from Telegram: send a message, get a reply, switch models, adjust reasoning effort, select an agent preset, and manage context — all from a private chat.
 
-> **Current version: v1.1.2** · This project is continuously updated.
+> **Current version: v1.2.0** · This project is continuously updated.
 
 ## Features
 
