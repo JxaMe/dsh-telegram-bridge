@@ -5,13 +5,9 @@ const HEARTBEAT_INTERVAL_MS = 3_000;
 const EDIT_COOLDOWN_MS = 2_000;
 const ACTIVITY_PHRASES = [
   '🐋 正在思考...',
-  '🐋 正在分析...',
-  '🐋 正在查阅资料...',
-  '🐋 正在写代码...',
-  '🐋 正在设计架构...',
-  '🐋 正在整理思路...',
-  '🐋 正在组织回答...',
-  '🐋 快好了...',
+  '🐋 正在处理...',
+  '🐋 还在继续...',
+  '🐋 正在整理...',
 ];
 const ERROR_CLEAR_MS = 2_500;
 

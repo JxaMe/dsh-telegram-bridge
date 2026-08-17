@@ -98,6 +98,11 @@ export class EventForwarder {
         this.pending.update(this.bot, chatId, now - last < 3000 ? '正在连续调用工具...' : '🐋 正在思考...');
         break;
       }
+      case 'command/run': {
+        const name = typeof data.name === 'string' ? data.name : '未知命令';
+        this.pending.update(this.bot, chatId, `正在执行命令：${name}`);
+        break;
+      }
       default:
         break;
     }
