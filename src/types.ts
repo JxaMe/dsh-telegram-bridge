@@ -1,8 +1,20 @@
+export type ErrorDisplayMode = 'raw' | 'friendly';
+
 export interface PluginConfig {
   botToken: string;
   ownerId: number;
   projectRoot?: string;
   dataDir?: string;
+  proxyEnabled?: boolean;
+  proxyUrl?: string;
+  defaultModel?: string;
+  defaultReasoningEffort?: string;
+  defaultAgentPreset?: string;
+  errorDisplayMode?: ErrorDisplayMode;
+  htmlFormatting?: boolean;
+  typingIndicator?: boolean;
+  queueLimit?: number;
+  debugLogging?: boolean;
 }
 
 export interface ChatState {

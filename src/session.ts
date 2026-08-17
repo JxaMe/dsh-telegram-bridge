@@ -8,6 +8,7 @@ export class SessionManager {
     private api: DshApi,
     private state: StateStore,
     private projectRoot: string,
+    private defaults: Partial<ChatSettings> = {},
     private onCreated?: (chatId: number, sessionId: string) => void,
   ) {}
 
@@ -32,6 +33,10 @@ export class SessionManager {
     }
     const sessionId = res.result.value.sessionId;
     this.state.setChatState(chatId, { sessionId, createdAt: Date.now(), lastActiveAt: Date.now() });
+    const mergedSettings: ChatSettings = { ...this.defaults, ...settings };
+    if (Object.keys(mergedSettings).length > 0) {
+      this.state.setChatSettings(chatId, mergedSettings);
+    }
     this.onCreated?.(chatId, sessionId);
     return sessionId;
   }

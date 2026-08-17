@@ -11,6 +11,8 @@ export class EventForwarder {
     private state: StateStore,
     private pending: PendingStatus,
     private queue: QueueManager,
+    private onPendingClear?: (chatId: number) => void,
+    private htmlFormatting = true,
   ) {}
 
   start(): void {
@@ -111,6 +113,14 @@ export function formatTelegramHtml(text: string): string {
 
 export function splitTelegramMessage(text: string, limit = 4096): string[] {
   return chunkBlocks(toBlocks(text), limit);
+}
+
+export function splitPlainMessage(text: string, limit = 4096): string[] {
+  const chunks: string[] = [];
+  for (let i = 0; i < text.length; i += limit) {
+    chunks.push(text.slice(i, i + limit));
+  }
+  return chunks.length > 0 ? chunks : [''];
 }
 
 function toBlocks(text: string): TextBlock[] {

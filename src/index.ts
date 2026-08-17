@@ -2,10 +2,11 @@ import { defaultDataDir, ensureDataDir, loadConfig, writeExampleConfig } from '.
 import type { DshContext } from './dsh-types.js';
 import { StateStore } from './state.js';
 import { startTelegram } from './telegram.js';
+import { registerWebSettings } from './web-settings.js';
 import type { PluginConfig } from './types.js';
 
 export const name = 'dsh-telegram-bridge';
-export const inject = ['apiProxy', 'agents'];
+export const inject = ['apiProxy', 'agents', 'webServer'];
 
 export function apply(ctx: DshContext): void {
   const dataDir = process.env.DSH_TELEGRAM_DATA_DIR ?? defaultDataDir();
@@ -23,6 +24,8 @@ export function apply(ctx: DshContext): void {
   }
 
   const state = new StateStore(config.dataDir ?? dataDir);
+  registerWebSettings(ctx, dataDir);
+
   let stopFn: (() => Promise<void>) | undefined;
   let disposed = false;
 

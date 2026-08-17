@@ -67,5 +67,15 @@ export function loadConfig(dataDir: string): PluginConfig {
     ownerId: parsed.ownerId,
     projectRoot: parsed.projectRoot ?? process.cwd(),
     dataDir,
+    proxyEnabled: parsed.proxyEnabled,
+    proxyUrl: parsed.proxyUrl ?? 'http://127.0.0.1:7890',
+    defaultModel: parsed.defaultModel ?? '',
+    defaultReasoningEffort: parsed.defaultReasoningEffort ?? '',
+    defaultAgentPreset: parsed.defaultAgentPreset ?? '',
+    errorDisplayMode: parsed.errorDisplayMode ?? 'raw',
+    htmlFormatting: parsed.htmlFormatting ?? true,
+    typingIndicator: parsed.typingIndicator ?? true,
+    queueLimit: parsed.queueLimit ?? 20,
+    debugLogging: parsed.debugLogging ?? false,
   };
 }

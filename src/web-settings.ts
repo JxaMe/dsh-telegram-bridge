@@ -1,0 +1,197 @@
+import { readFile, rename, mkdir, writeFile } from 'node:fs/promises';
+import type { IncomingMessage, ServerResponse } from 'node:http';
+import path from 'node:path';
+import type { DshContext } from './dsh-types.js';
+import type { ErrorDisplayMode, PluginConfig } from './types.js';
+
+const CONFIG_FILE_NAME = 'config.json';
+const LOOPBACKS = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
+
+interface SettingsBody {
+  botToken?: string;
+  ownerId?: number;
+  projectRoot?: string;
+  proxyEnabled?: boolean;
+  proxyUrl?: string;
+  defaultModel?: string;
+  defaultReasoningEffort?: string;
+  defaultAgentPreset?: string;
+  errorDisplayMode?: ErrorDisplayMode;
+  htmlFormatting?: boolean;
+  typingIndicator?: boolean;
+  queueLimit?: number;
+  debugLogging?: boolean;
+}
+
+export function registerWebSettings(ctx: DshContext, dataDir: string): void {
+  const webServer = ctx.webServer;
+  if (!webServer) return;
+
+  ctx.effect(() => {
+    webServer.register({
+      kind: 'prefix',
+      path: '/dsh-telegram-bridge',
+      handler: async (req: IncomingMessage, res: ServerResponse) => {
+        const remote = req.socket.remoteAddress ?? '';
+        if (!LOOPBACKS.has(remote)) {
+          sendJson(res, 403, { error: 'loopback only' });
+          return;
+        }
+        const url = new URL(req.url ?? '/', 'http://x');
+        const suffix = url.pathname.replace(/^\/dsh-telegram-bridge/, '') || '/';
+        try {
+          if (req.method === 'GET' && suffix === '/settings') {
+            const config = await readConfig(dataDir);
+            sendJson(res, 200, {
+              config: toPublicConfig(config),
+              presets: await listPresets(ctx),
+            });
+            return;
+          }
+          if (req.method === 'POST' && suffix === '/settings') {
+            const body = JSON.parse((await readBody(req)) || '{}') as SettingsBody;
+            const saved = await saveConfig(dataDir, body);
+            sendJson(res, 200, { ok: true, config: toPublicConfig(saved) });
+            return;
+          }
+          sendJson(res, 404, { error: 'no such endpoint' });
+        } catch (error) {
+          sendJson(res, 500, { error: error instanceof Error ? error.message : String(error) });
+        }
+      },
+    });
+  }, 'dsh-telegram-bridge: web settings routes');
+}
+
+function toPublicConfig(config: PluginConfig): Record<string, unknown> {
+  return {
+    botTokenSet: Boolean(config.botToken && config.botToken !== 'PASTE_BOT_TOKEN'),
+    ownerId: config.ownerId,
+    projectRoot: config.projectRoot ?? '',
+    proxyEnabled: config.proxyEnabled ?? false,
+    proxyUrl: config.proxyUrl ?? 'http://127.0.0.1:7890',
+    defaultModel: config.defaultModel ?? '',
+    defaultReasoningEffort: config.defaultReasoningEffort ?? '',
+    defaultAgentPreset: config.defaultAgentPreset ?? '',
+    errorDisplayMode: config.errorDisplayMode ?? 'raw',
+    htmlFormatting: config.htmlFormatting ?? true,
+    typingIndicator: config.typingIndicator ?? true,
+    queueLimit: config.queueLimit ?? 20,
+    debugLogging: config.debugLogging ?? false,
+  };
+}
+
+async function listPresets(ctx: DshContext): Promise<Array<{ id: string; name?: string }>> {
+  try {
+    const res = await ctx.apiProxy.agentPresets.list({ rpcId: crypto.randomUUID(), payload: {} });
+    if (res.result.ok) {
+      return res.result.value.presets.map((preset) => ({ id: preset.id, name: preset.name }));
+    }
+    return [];
+  } catch {
+    return [];
+  }
+}
+
+async function readConfig(dataDir: string): Promise<PluginConfig> {
+  const configPath = path.join(dataDir, CONFIG_FILE_NAME);
+  let raw: string;
+  try {
+    raw = await readFile(configPath, 'utf8');
+  } catch {
+    raw = '{}';
+  }
+  const parsed = JSON.parse(raw) as Partial<PluginConfig>;
+  return {
+    botToken: typeof parsed.botToken === 'string' ? parsed.botToken : '',
+    ownerId: typeof parsed.ownerId === 'number' ? parsed.ownerId : 0,
+    projectRoot: typeof parsed.projectRoot === 'string' ? parsed.projectRoot : '',
+    dataDir,
+    proxyEnabled: parsed.proxyEnabled,
+    proxyUrl: typeof parsed.proxyUrl === 'string' ? parsed.proxyUrl : 'http://127.0.0.1:7890',
+    defaultModel: typeof parsed.defaultModel === 'string' ? parsed.defaultModel : '',
+    defaultReasoningEffort: typeof parsed.defaultReasoningEffort === 'string' ? parsed.defaultReasoningEffort : '',
+    defaultAgentPreset: typeof parsed.defaultAgentPreset === 'string' ? parsed.defaultAgentPreset : '',
+    errorDisplayMode: parsed.errorDisplayMode === 'friendly' ? 'friendly' : 'raw',
+    htmlFormatting: typeof parsed.htmlFormatting === 'boolean' ? parsed.htmlFormatting : true,
+    typingIndicator: typeof parsed.typingIndicator === 'boolean' ? parsed.typingIndicator : true,
+    queueLimit: typeof parsed.queueLimit === 'number' && parsed.queueLimit > 0 ? parsed.queueLimit : 20,
+    debugLogging: typeof parsed.debugLogging === 'boolean' ? parsed.debugLogging : false,
+  };
+}
+
+async function saveConfig(dataDir: string, body: SettingsBody): Promise<PluginConfig> {
+  const current = await readConfig(dataDir);
+  const next: PluginConfig = { ...current };
+
+  if (typeof body.botToken === 'string' && body.botToken.trim().length > 0) {
+    next.botToken = body.botToken.trim();
+  }
+  if (typeof body.ownerId === 'number' && Number.isFinite(body.ownerId)) {
+    next.ownerId = body.ownerId;
+  }
+  if (typeof body.projectRoot === 'string') {
+    next.projectRoot = body.projectRoot;
+  }
+  if (typeof body.proxyEnabled === 'boolean') {
+    next.proxyEnabled = body.proxyEnabled;
+  }
+  if (typeof body.proxyUrl === 'string') {
+    next.proxyUrl = body.proxyUrl;
+  }
+  if (typeof body.defaultModel === 'string') {
+    next.defaultModel = body.defaultModel;
+  }
+  if (typeof body.defaultReasoningEffort === 'string') {
+    next.defaultReasoningEffort = body.defaultReasoningEffort;
+  }
+  if (typeof body.defaultAgentPreset === 'string') {
+    next.defaultAgentPreset = body.defaultAgentPreset;
+  }
+  if (body.errorDisplayMode === 'raw' || body.errorDisplayMode === 'friendly') {
+    next.errorDisplayMode = body.errorDisplayMode;
+  }
+  if (typeof body.htmlFormatting === 'boolean') {
+    next.htmlFormatting = body.htmlFormatting;
+  }
+  if (typeof body.typingIndicator === 'boolean') {
+    next.typingIndicator = body.typingIndicator;
+  }
+  if (typeof body.queueLimit === 'number' && body.queueLimit > 0) {
+    next.queueLimit = Math.floor(body.queueLimit);
+  }
+  if (typeof body.debugLogging === 'boolean') {
+    next.debugLogging = body.debugLogging;
+  }
+
+  await mkdir(dataDir, { recursive: true });
+  const configPath = path.join(dataDir, CONFIG_FILE_NAME);
+  const tmpPath = `${configPath}.tmp`;
+  await writeFile(tmpPath, JSON.stringify(next, null, 2) + '\n', 'utf8');
+  await rename(tmpPath, configPath);
+  return next;
+}
+
+function sendJson(res: ServerResponse, status: number, value: unknown): void {
+  const body = JSON.stringify(value);
+  res.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
+  res.end(body);
+}
+
+function readBody(req: IncomingMessage): Promise<string> {
+  return new Promise((resolve, reject) => {
+    let size = 0;
+    const chunks: Buffer[] = [];
+    req.on('data', (chunk: Buffer) => {
+      size += chunk.length;
+      if (size > 131072) {
+        reject(new Error('body too large'));
+        req.destroy();
+        return;
+      }
+      chunks.push(chunk);
+    });
+    req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+    req.on('error', reject);
+  });
+}

@@ -9,11 +9,14 @@ export declare class EventForwarder {
     private state;
     private pending;
     private queue;
-    constructor(ctx: DshContext, bot: Bot, state: StateStore, pending: PendingStatus, queue: QueueManager);
+    private onPendingClear?;
+    private htmlFormatting;
+    constructor(ctx: DshContext, bot: Bot, state: StateStore, pending: PendingStatus, queue: QueueManager, onPendingClear?: ((chatId: number) => void) | undefined, htmlFormatting?: boolean);
     start(): void;
     private findChatId;
     private sendToTelegram;
 }
 export declare function formatTelegramHtml(text: string): string;
 export declare function splitTelegramMessage(text: string, limit?: number): string[];
+export declare function splitPlainMessage(text: string, limit?: number): string[];
 export declare function escapeHtml(value: string): string;

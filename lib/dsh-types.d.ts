@@ -141,5 +141,12 @@ export interface DshContext {
     };
     on(event: string, listener: (session: unknown, event: unknown) => void): void;
     get<T = unknown>(name: string): T | undefined;
-    effect(fn: () => void | (() => void)): void;
+    effect(fn: () => void | (() => void), label?: string): void;
+    webServer?: {
+        register(options: {
+            kind: 'prefix';
+            path: string;
+            handler: (req: import('node:http').IncomingMessage, res: import('node:http').ServerResponse) => void | Promise<void>;
+        }): unknown;
+    };
 }

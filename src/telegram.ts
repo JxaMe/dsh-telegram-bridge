@@ -23,7 +23,12 @@ export interface TelegramDeps {
 
 export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => Promise<void> }> {
   const { ctx: hostCtx, api, config, state } = deps;
-  const proxyUrl = process.env.HTTPS_PROXY || process.env.https_proxy || '';
+  const envProxy = process.env.HTTPS_PROXY || process.env.https_proxy || '';
+  const proxyUrl = config.proxyEnabled === false
+    ? ''
+    : config.proxyEnabled === true
+      ? (config.proxyUrl || envProxy)
+      : envProxy;
   const bot = proxyUrl
     ? new Bot(config.botToken, {
         client: {
@@ -36,12 +41,19 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
     console.error('dsh-telegram-bridge middleware error:', redactToken(err.error, config.botToken));
   });
 
+  const typingEnabled = config.typingIndicator !== false;
   const pending = new PendingStatus();
   const settings = new SettingsManager(api, state);
   const sessions = new SessionManager(
     api,
     state,
     config.projectRoot ?? process.cwd(),
+    {
+      provider: undefined,
+      model: config.defaultModel || undefined,
+      reasoningEffort: config.defaultReasoningEffort || undefined,
+      agentPreset: config.defaultAgentPreset || undefined,
+    },
     async (chatId, _sessionId) => {
       try {
         const chatSettings = state.getChatSettings(chatId);
@@ -55,19 +67,29 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
       }
     },
   );
-  const queue = new QueueManager(api, sessions, state, async (chatId, error) => {
-    try {
-      await pending.clear(bot, chatId);
-      const failed = queue.getFailedItem(chatId);
-      const keyboard = failed ? new InlineKeyboard().text('🔄 重试', 'retry_failed') : undefined;
-      await bot.api.sendMessage(chatId, `处理失败：${friendlyError(error)}`, {
-        reply_markup: keyboard,
-      });
-    } catch {
-      // ignore report failures
-    }
-  });
-  const forwarder = new EventForwarder(hostCtx, bot, state, pending, queue);
+  const errorText = (error: unknown) =>
+    config.errorDisplayMode === 'friendly'
+      ? friendlyError(error)
+      : error instanceof Error ? error.message : String(error);
+  const queue = new QueueManager(
+    api,
+    sessions,
+    state,
+    async (chatId, error) => {
+      try {
+        await pending.clear(bot, chatId);
+        const failed = queue.getFailedItem(chatId);
+        const keyboard = failed ? new InlineKeyboard().text('🔄 重试', 'retry_failed') : undefined;
+        await bot.api.sendMessage(chatId, `处理失败：${errorText(error)}`, {
+          reply_markup: keyboard,
+        });
+      } catch {
+        // ignore report failures
+      }
+    },
+    config.queueLimit ?? 20,
+  );
+  const forwarder = new EventForwarder(hostCtx, bot, state, pending, queue, undefined, config.htmlFormatting !== false);
   forwarder.start();
 
   // Owner-only middleware
@@ -259,7 +281,7 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
     if (!pending.has(chatId)) {
       const sent = await bot.api.sendMessage(chatId, '🐋 Deep diving...');
       pending.set(bot, chatId, sent.message_id, queue.queueLength(chatId));
-      startTyping(bot, chatId);
+      startTyping(bot, chatId, typingEnabled);
     }
   });
 
@@ -525,7 +547,8 @@ async function sendCommandMenu(bot: Bot, chatId: number, pin = false): Promise<v
 
 const typingTimers = new Map<number, ReturnType<typeof setInterval>>();
 
-function startTyping(bot: Bot, chatId: number): void {
+function startTyping(bot: Bot, chatId: number, enabled = true): void {
+  if (!enabled) return;
   const existing = typingTimers.get(chatId);
   if (existing) return;
   const interval = setInterval(async () => {

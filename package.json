@@ -6,10 +6,11 @@
   "types": "lib/index.d.ts",
   "files": [
     "lib",
-    "extensions"
+    "extensions",
+    "dsh.plugin.json"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && node scripts/copy-client.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "prepare": "pnpm build",
     "test": "pnpm build && node --test test/*.test.mjs"
@@ -25,7 +26,21 @@
   "dsh": {
     "bundle": {
       "patch": "./extensions/dsh/cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [],
+      "immediately": false
     }
   },
-  "license": "MIT"
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "default": "./lib/client.js"
+    },
+    "./package.json": "./package.json"
+  }
 }
