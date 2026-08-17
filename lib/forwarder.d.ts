@@ -20,6 +20,7 @@ export declare class EventForwarder {
     private updateStatusFromEvent;
     private findChatId;
     private sendToTelegram;
+    private sendWithRetry;
 }
 export declare function formatTelegramHtml(text: string): string;
 export declare function splitTelegramMessage(text: string, limit?: number): string[];

@@ -16,6 +16,7 @@ export declare class StateStore {
     addSession(chatId: number, sessionId: string, title?: string): void;
     setActiveSession(chatId: number, sessionId: string): void;
     ensureSessionTitle(chatId: number, sessionId: string, title: string): void;
+    pruneOldSessions(maxAgeDays?: number): void;
     trimSessions(chatId: number, max: number): void;
     getChatSettings(chatId: number): ChatSettings;
     getSessionSettings(sessionId: string): ChatSettings;

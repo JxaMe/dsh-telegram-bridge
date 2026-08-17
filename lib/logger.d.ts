@@ -9,4 +9,5 @@ export declare class Logger {
     debug(message: string): void;
     redact(value: unknown, token: string): string;
     private write;
+    private rotateIfNeeded;
 }

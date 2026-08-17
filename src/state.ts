@@ -103,6 +103,30 @@ export class StateStore {
     }
   }
 
+  pruneOldSessions(maxAgeDays = 7): void {
+    const all = this.loadState();
+    const cutoff = Date.now() - maxAgeDays * 24 * 60 * 60 * 1000;
+    let changed = false;
+    for (const [key, chat] of Object.entries(all.chats)) {
+      if (!chat.sessions) continue;
+      const sessions = chat.sessions.filter((entry) => {
+        const last = entry.lastActiveAt ?? entry.createdAt;
+        return last >= cutoff;
+      });
+      if (!sessions.some((entry) => entry.sessionId === chat.sessionId)) {
+        const fallback = sessions[sessions.length - 1];
+        if (fallback) {
+          chat.sessionId = fallback.sessionId;
+          chat.createdAt = fallback.createdAt;
+          chat.lastActiveAt = fallback.lastActiveAt;
+        }
+      }
+      chat.sessions = sessions;
+      changed = true;
+    }
+    if (changed) this.writeJson(this.statePath, all);
+  }
+
   trimSessions(chatId: number, max: number): void {
     if (max <= 0) return;
     const all = this.loadState();

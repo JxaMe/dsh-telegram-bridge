@@ -1,4 +1,4 @@
-import { appendFileSync, mkdirSync } from 'node:fs';
+import { appendFileSync, mkdirSync, renameSync, statSync } from 'node:fs';
 import path from 'node:path';
 
 export class Logger {
@@ -45,9 +45,21 @@ export class Logger {
   private write(level: 'info' | 'warn' | 'error' | 'debug', message: string): void {
     const line = `[${new Date().toISOString()}] ${level.toUpperCase()} ${message}\n`;
     try {
+      this.rotateIfNeeded();
       appendFileSync(this.filePath, line, 'utf8');
     } catch {
       // Logging must never break the plugin.
+    }
+  }
+
+  private rotateIfNeeded(): void {
+    try {
+      const stat = statSync(this.filePath);
+      if (stat.size > 5 * 1024 * 1024) {
+        renameSync(this.filePath, `${this.filePath}.1`);
+      }
+    } catch {
+      // No file yet or rotation failed; ignore.
     }
   }
 }

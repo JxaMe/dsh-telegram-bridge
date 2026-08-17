@@ -795,7 +795,8 @@ async function statusText(
     + `<b>思考强度：</b>${escapeHtml(settings.reasoningEffort ?? '默认')}\n`
     + `<b>Preset：</b>${escapeHtml(presetName)}（${lockText}）\n`
     + `<b>消息：</b>用户 ${stats.userMessages} / 助手 ${stats.assistantMessages}\n`
-    + `<b>Token：</b>入 ${stats.inputTokens} / 出 ${stats.outputTokens}${cacheStr}`
+    + `<b>Token：</b>入 ${stats.inputTokens} / 出 ${stats.outputTokens}${cacheStr}\n`
+    + `<b>运行：</b>${formatUptime(getMetrics().uptimeSeconds)} · 错误 ${getMetrics().errors}`
   );
 }
 

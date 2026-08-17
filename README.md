@@ -86,12 +86,14 @@ dsh --profile web --dump-config | grep dsh-telegram-bridge
 
 ## 稳定性
 
-- **日志文件**：`~/.dsh/dsh-telegram-bridge/logs/dsh-telegram-bridge.log`
+- **日志文件**：`~/.dsh/dsh-telegram-bridge/logs/dsh-telegram-bridge.log`，超过 5MB 自动轮转
 - **状态备份**：`state.json.bak` / `settings.json.bak`，主文件损坏时自动回退恢复
 - **全局兜底**：未捕获的 Promise rejection / 异常会写入日志并尽量不中断运行
 - **启动自检**：启动时检查 Telegram API（`getMe`）与 dsh API（`agentPresets.list`），失败会写入日志
 - **状态行保活**：长任务期间状态行每 3 秒轮换文案，并在有工具调用时显示工具名
 - **队列持久化**：排队消息写入 `queue.json`，dsh 重启后自动恢复继续处理
+- **限流保护**：Telegram 429 限流自动等待后重试
+- **孤儿清理**：超过 7 天未活跃的会话自动移出列表（不删除 dsh session）
 
 ## 配置
 

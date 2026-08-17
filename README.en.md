@@ -85,12 +85,14 @@ Then restart `dsh web`.
 
 ## Stability
 
-- **Log file**: `~/.dsh/dsh-telegram-bridge/logs/dsh-telegram-bridge.log`
+- **Log file**: `~/.dsh/dsh-telegram-bridge/logs/dsh-telegram-bridge.log`, auto-rotated after 5MB
 - **State backup**: `state.json.bak` / `settings.json.bak`, auto-recovered when the main file is corrupted
 - **Global guards**: unhandled rejections / exceptions are logged and kept from stopping the plugin when possible
 - **Startup self-check**: verifies Telegram API (`getMe`) and dsh API (`agentPresets.list`) on boot
 - **Status line keepalive**: long tasks rotate status text every 3s and show tool names during tool calls
 - **Queue persistence**: queued messages are written to `queue.json` and resumed after a dsh restart
+- **Rate-limit protection**: Telegram 429 responses are retried after the requested wait
+- **Orphan cleanup**: sessions inactive for over 7 days are pruned from the list (not deleted on the dsh side)
 
 ## Configuration
 

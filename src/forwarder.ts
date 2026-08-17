@@ -117,9 +117,9 @@ export class EventForwarder {
       const chunk = chunks[index];
       const replyMarkup = isLastChunk(index) ? { reply_markup: replyActionsKeyboard() } : undefined;
       try {
-        await this.bot.api.sendMessage(chatId, chunk, { parse_mode: 'HTML', ...replyMarkup });
+        await this.sendWithRetry(() => this.bot.api.sendMessage(chatId, chunk, { parse_mode: 'HTML', ...replyMarkup }));
       } catch {
-        await this.bot.api.sendMessage(chatId, chunk, replyMarkup);
+        await this.sendWithRetry(() => this.bot.api.sendMessage(chatId, chunk, replyMarkup));
       }
     }
     incrReplySent();
@@ -130,6 +130,30 @@ export class EventForwarder {
       this.onPendingClear?.(chatId);
     }
   }
+
+  private async sendWithRetry(fn: () => Promise<unknown>): Promise<void> {
+    let lastError: unknown;
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      try {
+        await fn();
+        return;
+      } catch (error) {
+        lastError = error;
+        const code = (error as { error_code?: number }).error_code;
+        if (code === 429) {
+          const retryAfter = (error as { retry_after?: number }).retry_after ?? 1;
+          await sleep(Math.min(10, retryAfter) * 1000);
+          continue;
+        }
+        throw error;
+      }
+    }
+    throw lastError;
+  }
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 interface DshSessionEventEnvelope {
