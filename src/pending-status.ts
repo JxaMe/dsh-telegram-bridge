@@ -1,9 +1,18 @@
 import type { Bot } from 'grammy';
 
-const FIRST_HEARTBEAT_MS = 10_000;
-const HEARTBEAT_INTERVAL_MS = 15_000;
+const FIRST_HEARTBEAT_MS = 3_000;
+const HEARTBEAT_INTERVAL_MS = 3_000;
 const EDIT_COOLDOWN_MS = 2_000;
-const LONG_WAIT_MS = 30_000;
+const ACTIVITY_PHRASES = [
+  '🐋 正在思考...',
+  '🐋 正在分析...',
+  '🐋 正在查阅资料...',
+  '🐋 正在写代码...',
+  '🐋 正在设计架构...',
+  '🐋 正在整理思路...',
+  '🐋 正在组织回答...',
+  '🐋 快好了...',
+];
 const ERROR_CLEAR_MS = 2_500;
 
 /**
@@ -20,6 +29,8 @@ export class PendingStatus {
   private pendingEditTexts = new Map<number, string>();
   private editTimers = new Map<number, ReturnType<typeof setTimeout>>();
   private errorTimers = new Map<number, ReturnType<typeof setTimeout>>();
+  private activeTools = new Map<number, string>();
+  private activityIndexes = new Map<number, number>();
 
   has(chatId: number): boolean {
     return this.messageIds.has(chatId);
@@ -63,6 +74,14 @@ export class PendingStatus {
     this.editTimers.set(chatId, timer);
   }
 
+  setActiveTool(chatId: number, name: string): void {
+    this.activeTools.set(chatId, name);
+  }
+
+  clearActiveTool(chatId: number): void {
+    this.activeTools.delete(chatId);
+  }
+
   async showErrorThenClear(bot: Bot, chatId: number): Promise<void> {
     await this.update(bot, chatId, '❌ 处理失败');
     this.clearErrorTimer(chatId);
@@ -84,6 +103,8 @@ export class PendingStatus {
     this.currentTexts.delete(chatId);
     this.pendingEditTexts.delete(chatId);
     this.lastEditAt.delete(chatId);
+    this.activeTools.delete(chatId);
+    this.activityIndexes.delete(chatId);
     if (messageId === undefined) return;
     try {
       await bot.api.deleteMessage(chatId, messageId);
@@ -108,6 +129,8 @@ export class PendingStatus {
     this.currentTexts.clear();
     this.lastEditAt.clear();
     this.pendingEditTexts.clear();
+    this.activeTools.clear();
+    this.activityIndexes.clear();
   }
 
   private async editNow(bot: Bot, chatId: number, text: string): Promise<void> {
@@ -156,13 +179,17 @@ export class PendingStatus {
       const currentId = this.messageIds.get(chatId);
       if (currentId === undefined || currentId !== messageId) return;
 
-      const seconds = Math.round((Date.now() - (this.startedAt.get(chatId) ?? startedAt)) / 1000);
       const queueLen = this.queueLengths.get(chatId) ?? 0;
-      const base = this.currentTexts.get(chatId) ?? '仍在处理中';
-      let text = base;
-      if (seconds >= LONG_WAIT_MS / 1000 && !text.includes('已处理')) {
-        text += ` · 已处理 ${seconds}s`;
+      let text: string;
+      const activeTool = this.activeTools.get(chatId);
+      if (activeTool !== undefined) {
+        text = `正在调用工具：${activeTool}`;
+      } else {
+        const index = this.activityIndexes.get(chatId) ?? 0;
+        text = ACTIVITY_PHRASES[index % ACTIVITY_PHRASES.length];
+        this.activityIndexes.set(chatId, index + 1);
       }
+      this.currentTexts.set(chatId, text);
       if (queueLen > 0) {
         text += ` · 队列还有 ${queueLen} 条`;
       }

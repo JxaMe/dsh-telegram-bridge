@@ -84,12 +84,14 @@ export class EventForwarder {
         const last = this.lastToolAt.get(chatId) ?? 0;
         const name = typeof data.name === 'string' ? data.name : '未知工具';
         this.pending.update(this.bot, chatId, now - last < 3000 ? '正在连续调用工具...' : `正在调用工具：${name}`);
+        this.pending.setActiveTool(chatId, name);
         this.lastToolAt.set(chatId, now);
         break;
       }
       case 'tool/result': {
         const now = Date.now();
         const last = this.lastToolAt.get(chatId) ?? 0;
+        this.pending.clearActiveTool(chatId);
         this.pending.update(this.bot, chatId, now - last < 3000 ? '正在连续调用工具...' : '🐋 正在思考...');
         break;
       }
