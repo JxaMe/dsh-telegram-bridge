@@ -83,13 +83,15 @@ function toPublicConfig(config: PluginConfig): Record<string, unknown> {
   };
 }
 
-async function listModels(ctx: DshContext): Promise<Array<{ id: string; models: Array<{ id: string; name?: string; reasoning?: { efforts?: Array<{ id: string; name?: string }> } }> }>> {
+async function listModels(ctx: DshContext): Promise<{ groups: Array<{ id: string; models: Array<{ id: string; name?: string; reasoning?: { efforts?: Array<{ id: string; name?: string }> } }> }>; error?: string }> {
   try {
     const res = await ctx.apiProxy.llm.models({ rpcId: crypto.randomUUID(), payload: {} });
-    if (!res.result.ok) return [];
-    return res.result.value.groups;
-  } catch {
-    return [];
+    if (!res.result.ok) {
+      return { groups: [], error: `llm.models failed: ${JSON.stringify(res.result.error)}` };
+    }
+    return { groups: res.result.value.groups };
+  } catch (error) {
+    return { groups: [], error: `llm.models threw: ${error instanceof Error ? error.message : String(error)}` };
   }
 }
 
