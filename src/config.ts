@@ -69,6 +69,7 @@ export function loadConfig(dataDir: string): PluginConfig {
     dataDir,
     proxyEnabled: parsed.proxyEnabled,
     proxyUrl: parsed.proxyUrl ?? 'http://127.0.0.1:7890',
+    defaultProvider: parsed.defaultProvider ?? '',
     defaultModel: parsed.defaultModel ?? '',
     defaultReasoningEffort: parsed.defaultReasoningEffort ?? '',
     defaultAgentPreset: parsed.defaultAgentPreset ?? '',

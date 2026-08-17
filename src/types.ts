@@ -7,6 +7,7 @@ export interface PluginConfig {
   dataDir?: string;
   proxyEnabled?: boolean;
   proxyUrl?: string;
+  defaultProvider?: string;
   defaultModel?: string;
   defaultReasoningEffort?: string;
   defaultAgentPreset?: string;

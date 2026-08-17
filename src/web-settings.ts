@@ -13,6 +13,7 @@ interface SettingsBody {
   projectRoot?: string;
   proxyEnabled?: boolean;
   proxyUrl?: string;
+  defaultProvider?: string;
   defaultModel?: string;
   defaultReasoningEffort?: string;
   defaultAgentPreset?: string;
@@ -70,6 +71,7 @@ function toPublicConfig(config: PluginConfig): Record<string, unknown> {
     projectRoot: config.projectRoot ?? '',
     proxyEnabled: config.proxyEnabled ?? false,
     proxyUrl: config.proxyUrl ?? 'http://127.0.0.1:7890',
+    defaultProvider: config.defaultProvider ?? '',
     defaultModel: config.defaultModel ?? '',
     defaultReasoningEffort: config.defaultReasoningEffort ?? '',
     defaultAgentPreset: config.defaultAgentPreset ?? '',
@@ -79,6 +81,43 @@ function toPublicConfig(config: PluginConfig): Record<string, unknown> {
     queueLimit: config.queueLimit ?? 20,
     debugLogging: config.debugLogging ?? false,
   };
+}
+
+async function listModels(ctx: DshContext, dataDir: string): Promise<Array<{ id: string; models: Array<{ id: string; name?: string; reasoning?: { efforts?: Array<{ id: string; name?: string }> } }> }>> {
+  try {
+    let sessionId = await findAnySessionId(dataDir);
+    if (!sessionId) {
+      const res = await ctx.apiProxy.sessions.create({
+        rpcId: crypto.randomUUID(),
+        payload: { cwd: (await readConfig(dataDir)).projectRoot || process.cwd() },
+      });
+      if (res.result.ok) {
+        sessionId = res.result.value.sessionId;
+      }
+    }
+    if (!sessionId) return [];
+    const res = await ctx.apiProxy.sessions.models({
+      rpcId: crypto.randomUUID(),
+      payload: { sessionId },
+    });
+    if (!res.result.ok) return [];
+    return res.result.value.groups;
+  } catch {
+    return [];
+  }
+}
+
+async function findAnySessionId(dataDir: string): Promise<string | undefined> {
+  try {
+    const raw = await readFile(path.join(dataDir, 'state.json'), 'utf8');
+    const state = JSON.parse(raw) as { chats?: Record<string, { sessionId?: string }> };
+    for (const chat of Object.values(state.chats ?? {})) {
+      if (chat?.sessionId) return chat.sessionId;
+    }
+  } catch {
+    // No state file yet.
+  }
+  return undefined;
 }
 
 async function listPresets(ctx: DshContext): Promise<Array<{ id: string; name?: string }>> {
@@ -109,6 +148,7 @@ async function readConfig(dataDir: string): Promise<PluginConfig> {
     dataDir,
     proxyEnabled: parsed.proxyEnabled,
     proxyUrl: typeof parsed.proxyUrl === 'string' ? parsed.proxyUrl : 'http://127.0.0.1:7890',
+    defaultProvider: typeof parsed.defaultProvider === 'string' ? parsed.defaultProvider : '',
     defaultModel: typeof parsed.defaultModel === 'string' ? parsed.defaultModel : '',
     defaultReasoningEffort: typeof parsed.defaultReasoningEffort === 'string' ? parsed.defaultReasoningEffort : '',
     defaultAgentPreset: typeof parsed.defaultAgentPreset === 'string' ? parsed.defaultAgentPreset : '',
@@ -138,6 +178,9 @@ async function saveConfig(dataDir: string, body: SettingsBody): Promise<PluginCo
   }
   if (typeof body.proxyUrl === 'string') {
     next.proxyUrl = body.proxyUrl;
+  }
+  if (typeof body.defaultProvider === 'string') {
+    next.defaultProvider = body.defaultProvider;
   }
   if (typeof body.defaultModel === 'string') {
     next.defaultModel = body.defaultModel;

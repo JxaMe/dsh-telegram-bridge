@@ -49,7 +49,7 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
     state,
     config.projectRoot ?? process.cwd(),
     {
-      provider: undefined,
+      provider: config.defaultProvider || undefined,
       model: config.defaultModel || undefined,
       reasoningEffort: config.defaultReasoningEffort || undefined,
       agentPreset: config.defaultAgentPreset || undefined,
