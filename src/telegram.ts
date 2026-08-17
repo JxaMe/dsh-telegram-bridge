@@ -266,7 +266,8 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
     await cancelCurrent(chatId, hostCtx, state, queue);
     await pending.clear(bot, chatId);
     stopTyping(chatId);
-    await ctx.answerCallbackQuery('已打断当前任务并清空队列');
+    await ctx.reply('已打断当前任务并清空队列。');
+    await ctx.answerCallbackQuery('已打断');
   });
 
   bot.callbackQuery('status', async (ctx) => {
