@@ -87,7 +87,14 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
     const chatId = ctx.chat!.id;
     await cancelCurrent(chatId, hostCtx, state, queue);
     await pending.clear(bot, chatId);
-    await ctx.reply('已取消当前任务并清空队列。');
+    await ctx.reply('已打断当前任务并清空队列。');
+  });
+
+  bot.command('interrupt', async (ctx) => {
+    const chatId = ctx.chat!.id;
+    await cancelCurrent(chatId, hostCtx, state, queue);
+    await pending.clear(bot, chatId);
+    await ctx.reply('已打断当前任务并清空队列。');
   });
 
   bot.command('status', async (ctx) => {
@@ -134,7 +141,7 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
     const chatId = ctx.chat!.id;
     await cancelCurrent(chatId, hostCtx, state, queue);
     await pending.clear(bot, chatId);
-    await ctx.answerCallbackQuery('已取消当前任务并清空队列');
+    await ctx.answerCallbackQuery('已打断当前任务并清空队列');
   });
 
   bot.callbackQuery('status', async (ctx) => {
@@ -172,10 +179,10 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
         await ctx.answerCallbackQuery();
         return;
       }
-      if (command === 'cmd_cancel') {
+      if (command === 'cmd_cancel' || command === 'cmd_interrupt') {
         await cancelCurrent(chatId, hostCtx, state, queue);
         await pending.clear(bot, chatId);
-        await ctx.reply('已取消当前任务并清空队列。');
+        await ctx.reply('已打断当前任务并清空队列。');
         await ctx.answerCallbackQuery();
         return;
       }
@@ -470,7 +477,7 @@ async function setupCommandMenu(bot: Bot, ownerId: number, botToken: string): Pr
   try {
     await bot.api.setMyCommands([
       { command: 'new', description: '开始新对话' },
-      { command: 'cancel', description: '取消当前任务并清空队列' },
+      { command: 'interrupt', description: '打断当前任务并清空队列' },
       { command: 'status', description: '查看状态' },
       { command: 'help', description: '帮助' },
       { command: 'menu', description: '打开设置面板' },

@@ -13,9 +13,9 @@ Talk to your dsh agent directly from Telegram: send a message, get a reply, swit
 - 💬 **Private chat bridge** — one-on-one conversation between Telegram and a dsh agent session.
 - 🧠 **Model & reasoning controls** — dynamically list and switch models and reasoning efforts.
 - 🎛️ **Agent preset switching** — choose from available dsh presets (blank sessions only).
-- 📋 **Inline command menus** — quick buttons for new chat, cancel, status, and settings, plus an in-chat `/commands` fallback.
+- 📋 **Inline command menus** — quick buttons for new chat, interrupt, status, and settings, plus an in-chat `/commands` fallback.
 - ⏳ **Waiting indicator** — shows `🐋 Deep diving...` with heartbeats and keeps waiting while messages remain queued.
-- 🧵 **Queue & cancel** — messages are queued with a size limit; `/cancel` stops the current task and clears the queue.
+- 🧵 **Queue & cancel** — messages are queued with a size limit; `/interrupt` stops the current task and clears the queue (`/cancel` still works).
 - 🗜️ **Context compaction** — `/compact` reduces conversation history when it gets long.
 - 🧹 **Safe message formatting** — HTML escaping, fenced code blocks, and code-block-aware splitting.
 - 📊 **Enhanced status** — `/status` shows busy state, provider/model, message/token stats, and preset lock state.
@@ -32,7 +32,7 @@ Telegram Bot API
 dsh-telegram-bridge (dsh profile plugin)
       │
       ├── dsh apiProxy (sessions, models, presets)
-      ├── dsh agents (cancel)
+      ├── dsh agents (interrupt)
       └── dsh session events (assistant replies)
       │
       ▼
@@ -103,7 +103,7 @@ Open a private chat with your bot and send `/start`.
 |---|---|
 | `/start` | Show the main menu |
 | `/new` | Start a new conversation (requires confirmation) |
-| `/cancel` | Cancel the current task and clear the queue |
+| `/interrupt` | Interrupt the current task and clear the queue (`/cancel` still works) |
 | `/status` | Show session, queue, model, and preset status |
 | `/menu` | Open the settings panel |
 | `/compact` | Compact conversation history |

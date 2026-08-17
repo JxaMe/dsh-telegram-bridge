@@ -9,7 +9,7 @@ const BACK_CALLBACK = 'back';
 export function mainMenuKeyboard(): InlineKeyboard {
   return new InlineKeyboard()
     .text('新对话', 'new')
-    .text('取消', 'cancel')
+    .text('打断', 'cancel')
     .text('状态', 'status')
     .row()
     .text('设置', 'menu')
@@ -28,7 +28,7 @@ export function settingsKeyboard(): InlineKeyboard {
 export function commandMenuKeyboard(): InlineKeyboard {
   return new InlineKeyboard()
     .text('新对话', 'cmd_new')
-    .text('取消', 'cmd_cancel')
+    .text('打断', 'cmd_interrupt')
     .text('状态', 'cmd_status')
     .row()
     .text('设置', 'cmd_menu')
