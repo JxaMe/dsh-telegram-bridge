@@ -73,7 +73,25 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
   });
 
   bot.command('help', async (ctx) => {
+    const helpText = (
+      '<b>📋 命令帮助</b>\n\n'
+      + '<b>/start</b> - 显示主菜单和上手引导\n'
+      + '<b>/new</b> - 开始新对话（需要确认）\n'
+      + '<b>/interrupt</b> - 打断当前任务并清空队列\n'
+      + '<b>/cancel</b> - /interrupt 的别名，同样可用\n'
+      + '<b>/status</b> - 查看会话、队列、模型和统计\n'
+      + '<b>/menu</b> - 打开设置面板（切换模型/思考强度/Preset）\n'
+      + '<b>/compact</b> - 压缩对话历史\n'
+      + '<b>/commands</b> - 打开聊天内命令菜单\n'
+      + '<b>/help</b> - 显示本帮助\n\n'
+      + '💡 <b>提示</b>\n'
+      + '• 直接发消息即可与 dsh 对话\n'
+      + '• 多条消息会排队，等待提示会显示队列位置\n'
+      + '• 如果 Preset 锁定，需要先 /new 再切换\n'
+      + '• 处理失败的消息可以点击 🔄 重试'
+    );
     await sendCommandMenu(bot, ctx.chat!.id, true);
+    await ctx.reply(helpText, { parse_mode: 'HTML' });
   });
 
   bot.command('commands', async (ctx) => {
