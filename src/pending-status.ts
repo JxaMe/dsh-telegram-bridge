@@ -11,185 +11,181 @@ const ACTIVITY_PHRASES = [
 ];
 const ERROR_CLEAR_MS = 2_500;
 
+interface PendingChatState {
+  messageId?: number;
+  timer?: ReturnType<typeof setTimeout>;
+  startedAt?: number;
+  queueLength: number;
+  currentText?: string;
+  lastEditAt?: number;
+  pendingEditText?: string;
+  editTimer?: ReturnType<typeof setTimeout>;
+  errorTimer?: ReturnType<typeof setTimeout>;
+  activeTool?: string;
+  activityIndex: number;
+}
+
 /**
  * Tracks the per-chat status message ("Deep diving..." / "thinking...") so it
  * can be updated in place, rate-limited, and removed when the reply arrives.
  */
 export class PendingStatus {
-  private messageIds = new Map<number, number>();
-  private timers = new Map<number, ReturnType<typeof setTimeout>>();
-  private startedAt = new Map<number, number>();
-  private queueLengths = new Map<number, number>();
-  private currentTexts = new Map<number, string>();
-  private lastEditAt = new Map<number, number>();
-  private pendingEditTexts = new Map<number, string>();
-  private editTimers = new Map<number, ReturnType<typeof setTimeout>>();
-  private errorTimers = new Map<number, ReturnType<typeof setTimeout>>();
-  private activeTools = new Map<number, string>();
-  private activityIndexes = new Map<number, number>();
+  private chats = new Map<number, PendingChatState>();
 
   has(chatId: number): boolean {
-    return this.messageIds.has(chatId);
+    const chat = this.chats.get(chatId);
+    return chat?.messageId !== undefined;
   }
 
   set(bot: Bot, chatId: number, messageId: number, queueLength = 0, text = '🐋 Deep diving...'): void {
     this.clearEditTimer(chatId);
     this.clearTimer(chatId);
     this.clearErrorTimer(chatId);
-    this.messageIds.set(chatId, messageId);
-    this.startedAt.set(chatId, Date.now());
-    this.queueLengths.set(chatId, queueLength);
-    this.currentTexts.set(chatId, text);
-    this.lastEditAt.set(chatId, Date.now());
+    this.chats.set(chatId, {
+      messageId,
+      startedAt: Date.now(),
+      queueLength,
+      currentText: text,
+      lastEditAt: Date.now(),
+      activityIndex: 0,
+    });
     this.scheduleNext(bot, chatId, Date.now());
   }
 
   update(bot: Bot, chatId: number, text: string): void {
-    if (!this.messageIds.has(chatId)) return;
-    this.currentTexts.set(chatId, text);
+    const chat = this.chats.get(chatId);
+    if (!chat?.messageId) return;
+    chat.currentText = text;
     const now = Date.now();
-    const last = this.lastEditAt.get(chatId) ?? 0;
+    const last = chat.lastEditAt ?? 0;
     if (now - last >= EDIT_COOLDOWN_MS) {
-      this.pendingEditTexts.delete(chatId);
+      chat.pendingEditText = undefined;
       void this.editNow(bot, chatId, text);
-      this.lastEditAt.set(chatId, Date.now());
+      chat.lastEditAt = Date.now();
       return;
     }
-    this.pendingEditTexts.set(chatId, text);
-    if (this.editTimers.has(chatId)) return;
+    chat.pendingEditText = text;
+    if (chat.editTimer) return;
     const remaining = EDIT_COOLDOWN_MS - (now - last);
     const timer = setTimeout(() => {
-      this.editTimers.delete(chatId);
-      const text = this.pendingEditTexts.get(chatId);
+      chat.editTimer = undefined;
+      const text = chat.pendingEditText;
       if (text === undefined) return;
-      this.pendingEditTexts.delete(chatId);
-      if (!this.messageIds.has(chatId)) return;
+      chat.pendingEditText = undefined;
+      if (!chat.messageId) return;
       void this.editNow(bot, chatId, text);
-      this.lastEditAt.set(chatId, Date.now());
+      chat.lastEditAt = Date.now();
     }, Math.max(1, remaining));
-    this.editTimers.set(chatId, timer);
+    chat.editTimer = timer;
   }
 
   setQueueLength(chatId: number, length: number): void {
-    this.queueLengths.set(chatId, length);
+    const chat = this.chats.get(chatId);
+    if (chat) chat.queueLength = length;
   }
 
   setActiveTool(chatId: number, name: string): void {
-    this.activeTools.set(chatId, name);
+    const chat = this.chats.get(chatId);
+    if (chat) chat.activeTool = name;
   }
 
   clearActiveTool(chatId: number): void {
-    this.activeTools.delete(chatId);
+    const chat = this.chats.get(chatId);
+    if (chat) chat.activeTool = undefined;
   }
 
   async showErrorThenClear(bot: Bot, chatId: number): Promise<void> {
     await this.update(bot, chatId, '❌ 处理失败');
     this.clearErrorTimer(chatId);
+    const chat = this.chats.get(chatId);
+    if (!chat) return;
     const timer = setTimeout(() => {
-      this.errorTimers.delete(chatId);
+      chat.errorTimer = undefined;
       void this.clear(bot, chatId);
     }, ERROR_CLEAR_MS);
-    this.errorTimers.set(chatId, timer);
+    chat.errorTimer = timer;
   }
 
   async clear(bot: Bot, chatId: number): Promise<void> {
     this.clearTimer(chatId);
     this.clearEditTimer(chatId);
     this.clearErrorTimer(chatId);
-    const messageId = this.messageIds.get(chatId);
-    this.messageIds.delete(chatId);
-    this.startedAt.delete(chatId);
-    this.queueLengths.delete(chatId);
-    this.currentTexts.delete(chatId);
-    this.pendingEditTexts.delete(chatId);
-    this.lastEditAt.delete(chatId);
-    this.activeTools.delete(chatId);
-    this.activityIndexes.delete(chatId);
-    if (messageId === undefined) return;
+    const chat = this.chats.get(chatId);
+    this.chats.delete(chatId);
+    if (!chat?.messageId) return;
     try {
-      await bot.api.deleteMessage(chatId, messageId);
+      await bot.api.deleteMessage(chatId, chat.messageId);
     } catch {
       // The message may already be gone; ignore.
     }
   }
 
   dispose(): void {
-    for (const chatId of this.timers.keys()) {
+    for (const chatId of this.chats.keys()) {
       this.clearTimer(chatId);
-    }
-    for (const chatId of this.editTimers.keys()) {
       this.clearEditTimer(chatId);
-    }
-    for (const chatId of this.errorTimers.keys()) {
       this.clearErrorTimer(chatId);
     }
-    this.messageIds.clear();
-    this.startedAt.clear();
-    this.queueLengths.clear();
-    this.currentTexts.clear();
-    this.lastEditAt.clear();
-    this.pendingEditTexts.clear();
-    this.activeTools.clear();
-    this.activityIndexes.clear();
+    this.chats.clear();
   }
 
   private async editNow(bot: Bot, chatId: number, text: string): Promise<void> {
-    const messageId = this.messageIds.get(chatId);
-    if (messageId === undefined) return;
+    const chat = this.chats.get(chatId);
+    if (!chat?.messageId) return;
     try {
-      await bot.api.editMessageText(chatId, messageId, text);
+      await bot.api.editMessageText(chatId, chat.messageId, text);
     } catch {
       // Ignore edit failures; the message may have been deleted already.
     }
   }
 
   private clearTimer(chatId: number): void {
-    const timer = this.timers.get(chatId);
-    if (timer !== undefined) {
-      clearTimeout(timer);
-      this.timers.delete(chatId);
+    const chat = this.chats.get(chatId);
+    if (chat?.timer) {
+      clearTimeout(chat.timer);
+      chat.timer = undefined;
     }
   }
 
   private clearEditTimer(chatId: number): void {
-    const timer = this.editTimers.get(chatId);
-    if (timer !== undefined) {
-      clearTimeout(timer);
-      this.editTimers.delete(chatId);
+    const chat = this.chats.get(chatId);
+    if (chat?.editTimer) {
+      clearTimeout(chat.editTimer);
+      chat.editTimer = undefined;
     }
   }
 
   private clearErrorTimer(chatId: number): void {
-    const timer = this.errorTimers.get(chatId);
-    if (timer !== undefined) {
-      clearTimeout(timer);
-      this.errorTimers.delete(chatId);
+    const chat = this.chats.get(chatId);
+    if (chat?.errorTimer) {
+      clearTimeout(chat.errorTimer);
+      chat.errorTimer = undefined;
     }
   }
 
   private scheduleNext(bot: Bot, chatId: number, startedAt: number): void {
-    const messageId = this.messageIds.get(chatId);
-    if (messageId === undefined) return;
+    const chat = this.chats.get(chatId);
+    if (!chat?.messageId) return;
 
     const elapsed = Date.now() - startedAt;
     const delay = elapsed === 0 ? FIRST_HEARTBEAT_MS : HEARTBEAT_INTERVAL_MS;
 
     const timer = setTimeout(async () => {
-      this.timers.delete(chatId);
-      const currentId = this.messageIds.get(chatId);
-      if (currentId === undefined || currentId !== messageId) return;
+      chat.timer = undefined;
+      const currentChat = this.chats.get(chatId);
+      if (!currentChat?.messageId || currentChat.messageId !== chat.messageId) return;
 
-      const queueLen = this.queueLengths.get(chatId) ?? 0;
+      const queueLen = currentChat.queueLength;
       let text: string;
-      const activeTool = this.activeTools.get(chatId);
+      const activeTool = currentChat.activeTool;
       if (activeTool !== undefined) {
         text = `正在调用工具：${activeTool}`;
       } else {
-        const index = this.activityIndexes.get(chatId) ?? 0;
+        const index = currentChat.activityIndex;
         text = ACTIVITY_PHRASES[index % ACTIVITY_PHRASES.length];
-        this.activityIndexes.set(chatId, index + 1);
+        currentChat.activityIndex = index + 1;
       }
-      this.currentTexts.set(chatId, text);
+      currentChat.currentText = text;
       if (queueLen > 0) {
         text += ` · 队列还有 ${queueLen} 条`;
       }
@@ -198,6 +194,6 @@ export class PendingStatus {
       this.scheduleNext(bot, chatId, startedAt);
     }, delay);
 
-    this.timers.set(chatId, timer);
+    chat.timer = timer;
   }
 }

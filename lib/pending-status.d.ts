@@ -4,17 +4,7 @@ import type { Bot } from 'grammy';
  * can be updated in place, rate-limited, and removed when the reply arrives.
  */
 export declare class PendingStatus {
-    private messageIds;
-    private timers;
-    private startedAt;
-    private queueLengths;
-    private currentTexts;
-    private lastEditAt;
-    private pendingEditTexts;
-    private editTimers;
-    private errorTimers;
-    private activeTools;
-    private activityIndexes;
+    private chats;
     has(chatId: number): boolean;
     set(bot: Bot, chatId: number, messageId: number, queueLength?: number, text?: string): void;
     update(bot: Bot, chatId: number, text: string): void;
