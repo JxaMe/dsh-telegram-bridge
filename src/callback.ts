@@ -35,9 +35,12 @@ export function encodeCallback(parts: string[]): string {
 }
 
 export function decodeCallback(data: string): string[] | undefined {
-  if (callbackStore.has(data)) {
-    const entry = callbackStore.get(data)!;
+  const entry = callbackStore.get(data);
+  if (entry) {
     callbackStore.delete(data);
+    if (Date.now() - entry.timestamp > TOKEN_TTL_MS) {
+      return undefined;
+    }
     return entry.data;
   }
   if (data.includes('|')) return decodeData(data);

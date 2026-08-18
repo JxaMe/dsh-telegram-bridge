@@ -1,6 +1,5 @@
 import { appendFileSync, mkdirSync, renameSync, statSync } from 'node:fs';
 import path from 'node:path';
-import { redactToken, toText } from './security.js';
 
 export class Logger {
   private filePath: string;

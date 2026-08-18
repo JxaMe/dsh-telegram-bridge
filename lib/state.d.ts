@@ -34,6 +34,7 @@ export declare class StateStore {
         cacheReadTokens?: number;
         cacheWriteTokens?: number;
     }, chatState?: ChatState): void;
+    private addAssistantStats;
     setChatSettings(chatId: number, settings: ChatSettings): void;
     setSessionSettings(sessionId: string, settings: ChatSettings): void;
     private ensureLoaded;

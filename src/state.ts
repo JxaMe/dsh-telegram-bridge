@@ -192,53 +192,14 @@ export class StateStore {
 
   addAssistantMessage(chatId: number, usage?: { inputTokens?: number; outputTokens?: number; cacheReadTokens?: number; cacheWriteTokens?: number }): void {
     const all = this.loadState();
-    const key = String(chatId);
-    const stats = all.stats?.[key] ?? {
-      userMessages: 0,
-      assistantMessages: 0,
-      inputTokens: 0,
-      outputTokens: 0,
-    };
-    stats.assistantMessages += 1;
-    if (usage) {
-      stats.inputTokens += usage.inputTokens ?? 0;
-      stats.outputTokens += usage.outputTokens ?? 0;
-      if (usage.cacheReadTokens !== undefined) {
-        stats.cacheReadTokens = (stats.cacheReadTokens ?? 0) + usage.cacheReadTokens;
-      }
-      if (usage.cacheWriteTokens !== undefined) {
-        stats.cacheWriteTokens = (stats.cacheWriteTokens ?? 0) + usage.cacheWriteTokens;
-      }
-    }
-    all.stats ??= {};
-    all.stats[key] = stats;
+    this.addAssistantStats(all, String(chatId), usage);
     this.writeJson(this.statePath, all);
   }
 
   updateAssistantMessageAndChatState(chatId: number, usage?: { inputTokens?: number; outputTokens?: number; cacheReadTokens?: number; cacheWriteTokens?: number }, chatState?: ChatState): void {
     const all = this.loadState();
     const key = String(chatId);
-
-    // Update stats
-    const stats = all.stats?.[key] ?? {
-      userMessages: 0,
-      assistantMessages: 0,
-      inputTokens: 0,
-      outputTokens: 0,
-    };
-    stats.assistantMessages += 1;
-    if (usage) {
-      stats.inputTokens += usage.inputTokens ?? 0;
-      stats.outputTokens += usage.outputTokens ?? 0;
-      if (usage.cacheReadTokens !== undefined) {
-        stats.cacheReadTokens = (stats.cacheReadTokens ?? 0) + usage.cacheReadTokens;
-      }
-      if (usage.cacheWriteTokens !== undefined) {
-        stats.cacheWriteTokens = (stats.cacheWriteTokens ?? 0) + usage.cacheWriteTokens;
-      }
-    }
-    all.stats ??= {};
-    all.stats[key] = stats;
+    this.addAssistantStats(all, key, usage);
 
     // Update chat state if provided
     if (chatState) {
@@ -246,6 +207,28 @@ export class StateStore {
     }
 
     this.writeJson(this.statePath, all);
+  }
+
+  private addAssistantStats(all: PersistedState, key: string, usage?: { inputTokens?: number; outputTokens?: number; cacheReadTokens?: number; cacheWriteTokens?: number }): void {
+    const stats = all.stats?.[key] ?? {
+      userMessages: 0,
+      assistantMessages: 0,
+      inputTokens: 0,
+      outputTokens: 0,
+    };
+    stats.assistantMessages += 1;
+    if (usage) {
+      stats.inputTokens += usage.inputTokens ?? 0;
+      stats.outputTokens += usage.outputTokens ?? 0;
+      if (usage.cacheReadTokens !== undefined) {
+        stats.cacheReadTokens = (stats.cacheReadTokens ?? 0) + usage.cacheReadTokens;
+      }
+      if (usage.cacheWriteTokens !== undefined) {
+        stats.cacheWriteTokens = (stats.cacheWriteTokens ?? 0) + usage.cacheWriteTokens;
+      }
+    }
+    all.stats ??= {};
+    all.stats[key] = stats;
   }
 
   setChatSettings(chatId: number, settings: ChatSettings): void {

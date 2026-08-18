@@ -30,7 +30,7 @@ test('cleanupCallbackStore removes expired tokens', () => {
   assert.ok(token);
   // Token should be valid immediately
   assert.deepEqual(decodeCallback(token), parts);
-  
+
   // Create another token and make it expired
   const token2 = encodeCallback(['test', 'data2']);
   assert.ok(token2);
@@ -40,4 +40,11 @@ test('cleanupCallbackStore removes expired tokens', () => {
   cleanupCallbackStore();
   // Expired token should be gone
   assert.equal(decodeCallback(token2), undefined);
+});
+
+test('decodeCallback rejects an expired token even before cleanup runs', () => {
+  clearCallbackStoreForTests();
+  const token = encodeCallback(['test', 'expired']);
+  setCallbackEntryTimestampForTests(token, Date.now() - 20 * 60 * 1000);
+  assert.equal(decodeCallback(token), undefined);
 });

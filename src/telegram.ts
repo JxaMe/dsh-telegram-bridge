@@ -46,104 +46,36 @@ const HELP_TEXT = (
   + '• 处理失败的消息可以点击 🔄 重试'
 );
 
-export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => Promise<void> }> {
-  const { ctx: hostCtx, api, config, state, logger } = deps;
-  const envProxy = process.env.HTTPS_PROXY || process.env.https_proxy || process.env.HTTP_PROXY || process.env.http_proxy || '';
-  const proxyUrl = config.proxyEnabled === false
-    ? ''
-    : config.proxyEnabled === true
-      ? (config.proxyUrl || envProxy)
-      : envProxy;
-  const debugLog = (message: string) => {
-    logger.debug(message);
-  };
-  const bot = proxyUrl
-    ? new Bot(config.botToken, {
-        client: {
-          fetch: createProxiedFetch(proxyUrl),
-        },
-      })
-    : new Bot(config.botToken);
+export interface TelegramRuntime {
+  hostCtx: DshContext;
+  api: DshApi;
+  config: PluginConfig;
+  state: StateStore;
+  pending: PendingStatus;
+  settings: SettingsManager;
+  sessions: SessionManager;
+  queue: QueueManager;
+  typingEnabled: boolean;
+  proxyUrl: string;
+  debugLog: (message: string) => void;
+  checkLatestVersion?: typeof checkLatestVersion;
+}
 
-  bot.catch((err) => {
-    incrError();
-    logger.error(`middleware error: ${redactToken(err.error, config.botToken)}`);
-  });
-
-  try {
-    const me = await bot.api.getMe();
-    debugLog(`Telegram bot connected as @${me.username ?? 'unknown'}`);
-  } catch (error) {
-    logger.error(`Telegram getMe failed: ${redactToken(error, config.botToken)}`);
-    throw error;
-  }
-
-  void (async () => {
-    try {
-      const selfCheck = await api.agentPresets.list({ rpcId: createRpcId(), payload: {} });
-      if (!selfCheck.result.ok) {
-        logger.warn(`dsh API self-check agentPresets.list: ${JSON.stringify(selfCheck.result.error)}`);
-      }
-    } catch (error) {
-      logger.warn(`dsh API self-check failed: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  })();
-
-  const typingEnabled = config.typingIndicator !== false;
-  const pending = new PendingStatus();
-  const settings = new SettingsManager(api, state);
-  const sessions = new SessionManager(
+export function registerTelegramHandlers(bot: Bot, runtime: TelegramRuntime): void {
+  const {
+    hostCtx,
     api,
+    config,
     state,
-    config.projectRoot ?? process.cwd(),
-    {
-      provider: config.defaultProvider || undefined,
-      model: config.defaultModel || undefined,
-      reasoningEffort: config.defaultReasoningEffort || undefined,
-      agentPreset: config.defaultAgentPreset || undefined,
-    },
-    async (chatId, sessionId) => {
-      try {
-        debugLog(`session created ${sessionId} for chat ${chatId}`);
-        const chatSettings = state.getChatSettings(chatId);
-        const presetName = chatSettings.agentPresetName ?? chatSettings.agentPreset ?? '默认';
-        await bot.api.sendMessage(
-          chatId,
-          `🆕 新会话已创建\n模型：${chatSettings.model ?? '默认'}\nPreset：${presetName}`,
-        );
-      } catch {
-        // Notification failure should not break session creation.
-      }
-    },
-    config.maxSessionsPerChat ?? 5,
-  );
-  const errorText = (error: unknown) =>
-    config.errorDisplayMode === 'friendly'
-      ? friendlyError(error)
-      : error instanceof Error ? error.message : String(error);
-  const queue = new QueueManager(
-    api,
+    pending,
+    settings,
     sessions,
-    state,
-    async (chatId, error, failureId) => {
-      try {
-        await pending.showErrorThenClear(bot, chatId);
-        stopTyping(chatId);
-        incrError();
-        const failed = queue.getFailedItem(chatId, failureId);
-        const keyboard = failed ? new InlineKeyboard().text('🔄 重试', encodeCallback(['retry', failureId])) : undefined;
-        await bot.api.sendMessage(chatId, `处理失败：${errorText(error)}`, {
-          reply_markup: keyboard,
-        });
-      } catch {
-        // ignore report failures
-      }
-    },
-    config.queueLimit ?? 20,
-    config.dataDir ?? process.env.DSH_TELEGRAM_DATA_DIR,
-  );
-  const forwarder = new EventForwarder(hostCtx, bot, state, pending, queue, (chatId) => stopTyping(chatId), config.htmlFormatting !== false, config.statusLine !== false);
-  forwarder.start();
+    queue,
+    typingEnabled,
+    proxyUrl,
+    debugLog,
+    checkLatestVersion: fetchLatestVersion = checkLatestVersion,
+  } = runtime;
 
   // Owner-only middleware
   bot.use(async (ctx, next) => {
@@ -171,7 +103,7 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
 
   bot.command('version', async (ctx) => {
     const current = currentVersion();
-    const info = await checkLatestVersion(proxyUrl);
+    const info = await fetchLatestVersion(proxyUrl);
     const text = info.hasUpdate
       ? `当前版本：v${current}\n最新版本：v${info.latest}\n\n📢 有新版本可用，请更新插件。\n${info.url ?? 'https://github.com/JxaMe/dsh-telegram-bridge/releases'}`
       : `当前版本：v${current}（已是最新）`;
@@ -617,6 +549,122 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
       startTyping(bot, ctx.chat.id, typingEnabled);
     }
     await ctx.replyWithChatAction('typing');
+  });
+
+}
+
+export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => Promise<void> }> {
+  const { ctx: hostCtx, api, config, state, logger } = deps;
+  const envProxy = process.env.HTTPS_PROXY || process.env.https_proxy || process.env.HTTP_PROXY || process.env.http_proxy || '';
+  const proxyUrl = config.proxyEnabled === false
+    ? ''
+    : config.proxyEnabled === true
+      ? (config.proxyUrl || envProxy)
+      : envProxy;
+  const debugLog = (message: string) => {
+    logger.debug(message);
+  };
+  const bot = proxyUrl
+    ? new Bot(config.botToken, {
+        client: {
+          fetch: createProxiedFetch(proxyUrl),
+        },
+      })
+    : new Bot(config.botToken);
+
+  bot.catch((err) => {
+    incrError();
+    logger.error(`middleware error: ${redactToken(err.error, config.botToken)}`);
+  });
+
+  try {
+    const me = await bot.api.getMe();
+    debugLog(`Telegram bot connected as @${me.username ?? 'unknown'}`);
+  } catch (error) {
+    logger.error(`Telegram getMe failed: ${redactToken(error, config.botToken)}`);
+    throw error;
+  }
+
+  void (async () => {
+    try {
+      const selfCheck = await api.agentPresets.list({ rpcId: createRpcId(), payload: {} });
+      if (!selfCheck.result.ok) {
+        logger.warn(`dsh API self-check agentPresets.list: ${JSON.stringify(selfCheck.result.error)}`);
+      }
+    } catch (error) {
+      logger.warn(`dsh API self-check failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  })();
+
+  const typingEnabled = config.typingIndicator !== false;
+  const pending = new PendingStatus();
+  const settings = new SettingsManager(api, state);
+  const sessions = new SessionManager(
+    api,
+    state,
+    config.projectRoot ?? process.cwd(),
+    {
+      provider: config.defaultProvider || undefined,
+      model: config.defaultModel || undefined,
+      reasoningEffort: config.defaultReasoningEffort || undefined,
+      agentPreset: config.defaultAgentPreset || undefined,
+    },
+    async (chatId, sessionId) => {
+      try {
+        debugLog(`session created ${sessionId} for chat ${chatId}`);
+        const chatSettings = state.getChatSettings(chatId);
+        const presetName = chatSettings.agentPresetName ?? chatSettings.agentPreset ?? '默认';
+        await bot.api.sendMessage(
+          chatId,
+          `🆕 新会话已创建\n模型：${chatSettings.model ?? '默认'}\nPreset：${presetName}`,
+        );
+      } catch {
+        // Notification failure should not break session creation.
+      }
+    },
+    config.maxSessionsPerChat ?? 5,
+  );
+  const errorText = (error: unknown) =>
+    config.errorDisplayMode === 'friendly'
+      ? friendlyError(error)
+      : error instanceof Error ? error.message : String(error);
+  const queue = new QueueManager(
+    api,
+    sessions,
+    state,
+    async (chatId, error, failureId) => {
+      try {
+        await pending.showErrorThenClear(bot, chatId);
+        stopTyping(chatId);
+        incrError();
+        const failed = queue.getFailedItem(chatId, failureId);
+        const keyboard = failed ? new InlineKeyboard().text('🔄 重试', encodeCallback(['retry', failureId])) : undefined;
+        await bot.api.sendMessage(chatId, `处理失败：${errorText(error)}`, {
+          reply_markup: keyboard,
+        });
+      } catch {
+        // ignore report failures
+      }
+    },
+    config.queueLimit ?? 20,
+    config.dataDir ?? process.env.DSH_TELEGRAM_DATA_DIR,
+  );
+  const forwarder = new EventForwarder(hostCtx, bot, state, pending, queue, (chatId) => stopTyping(chatId), config.htmlFormatting !== false, config.statusLine !== false);
+  forwarder.start();
+
+  registerTelegramHandlers(bot, {
+    hostCtx,
+    api,
+    config,
+    state,
+    pending,
+    settings,
+    sessions,
+    queue,
+    typingEnabled,
+    proxyUrl,
+    debugLog,
+    checkLatestVersion,
   });
 
   await bot.init();

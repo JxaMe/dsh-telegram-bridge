@@ -48,7 +48,7 @@ dsh Web UI 设置页提供 **Telegram Bridge** 独立分区，可在页面中管
 
 > **注意**：保存配置后需要重启 dsh-telegram-bridge 插件才能生效。
 
-> **🛡️ 写入防护**：Web 设置端点仅监听回环地址，且 `POST /dsh-telegram-bridge/settings` 现在需要 CSRF token（由 `GET .../settings` 签发、5 分钟有效，随 `x-csrf-token` 请求头或请求体 `csrfToken` 字段提交）。token 由进程级随机密钥与当前 `botToken` 派生，跨站/本地脚本无法伪造，防止未授权改写 botToken 等配置。
+> **🛡️ 写入防护**：Web 设置端点仅监听回环地址，且 `POST /dsh-telegram-bridge/settings` 现在需要 CSRF token（由 `GET .../settings` 签发、5 分钟窗口（兼容前一窗口，最长约 10 分钟），随 `x-csrf-token` 请求头或请求体 `csrfToken` 字段提交）。token 由进程级随机密钥与当前 `botToken` 派生，跨站/本地脚本无法伪造，防止未授权改写 botToken 等配置。
 
 ![dsh-telegram-bridge settings](./set.png)
 
