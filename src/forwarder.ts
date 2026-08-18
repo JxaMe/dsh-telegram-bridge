@@ -221,21 +221,13 @@ interface TextBlock {
 
 const FENCED_BLOCK_RE = /```([^\n`]*)[ \t]*\n([\s\S]*?)```/g;
 
-export function formatTelegramHtml(text: string): string {
-  return renderBlocks(toBlocks(text));
-}
+
 
 export function splitTelegramMessage(text: string, limit = 4096): string[] {
   return chunkBlocks(toBlocks(text), limit);
 }
 
-export function splitPlainMessage(text: string, limit = 4096): string[] {
-  const chunks: string[] = [];
-  for (let i = 0; i < text.length; i += limit) {
-    chunks.push(text.slice(i, i + limit));
-  }
-  return chunks.length > 0 ? chunks : [''];
-}
+
 
 function splitLongPlainLine(line: string, limit: number): string[] {
   const parts = line.split(/(?<=[。！？!?.])\s+/);

@@ -67,14 +67,14 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
 
   bot.catch((err) => {
     incrError();
-    logger.error(`middleware error: ${logger.redact(err.error, config.botToken)}`);
+    logger.error(`middleware error: ${redactToken(err.error, config.botToken)}`);
   });
 
   try {
     const me = await bot.api.getMe();
     debugLog(`Telegram bot connected as @${me.username ?? 'unknown'}`);
   } catch (error) {
-    logger.error(`Telegram getMe failed: ${logger.redact(error, config.botToken)}`);
+    logger.error(`Telegram getMe failed: ${redactToken(error, config.botToken)}`);
     throw error;
   }
 
@@ -637,7 +637,7 @@ export async function startTelegram(deps: TelegramDeps): Promise<{ stop: () => P
   void bot.start({
     onStart: () => debugLog('Telegram bot started'),
   }).catch((error) => {
-    logger.error(`Telegram bot stopped with error: ${logger.redact(error, config.botToken)}`);
+    logger.error(`Telegram bot stopped with error: ${redactToken(error, config.botToken)}`);
   });
 
   return {
@@ -906,7 +906,7 @@ async function setupCommandMenu(bot: Bot, ownerId: number, botToken: string, log
       menu_button: { type: 'commands' },
     });
   } catch (error) {
-    logger.error(`Failed to setup command menu: ${logger.redact(error, botToken)}`);
+    logger.error(`Failed to setup command menu: ${redactToken(error, botToken)}`);
   }
 }
 

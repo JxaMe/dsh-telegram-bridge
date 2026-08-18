@@ -32,7 +32,7 @@ export function redactToken(value: unknown, token: string): string {
   return text.split(token).join('[REDACTED]');
 }
 
-function toText(value: unknown): string {
+export function toText(value: unknown): string {
   if (typeof value === 'string') return value;
   if (value instanceof Error) return value.message;
   try {

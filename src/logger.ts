@@ -1,5 +1,6 @@
 import { appendFileSync, mkdirSync, renameSync, statSync } from 'node:fs';
 import path from 'node:path';
+import { redactToken, toText } from './security.js';
 
 export class Logger {
   private filePath: string;
@@ -36,12 +37,6 @@ export class Logger {
     this.write('debug', message);
   }
 
-  redact(value: unknown, token: string): string {
-    const text = toText(value);
-    if (!token) return text;
-    return text.split(token).join('[REDACTED]');
-  }
-
   private write(level: 'info' | 'warn' | 'error' | 'debug', message: string): void {
     const line = `[${new Date().toISOString()}] ${level.toUpperCase()} ${message}\n`;
     try {
@@ -61,15 +56,5 @@ export class Logger {
     } catch {
       // No file yet or rotation failed; ignore.
     }
-  }
-}
-
-function toText(value: unknown): string {
-  if (typeof value === 'string') return value;
-  if (value instanceof Error) return value.message;
-  try {
-    return JSON.stringify(value);
-  } catch {
-    return String(value);
   }
 }
