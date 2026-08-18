@@ -28,6 +28,12 @@ export declare class StateStore {
         cacheReadTokens?: number;
         cacheWriteTokens?: number;
     }): void;
+    updateAssistantMessageAndChatState(chatId: number, usage?: {
+        inputTokens?: number;
+        outputTokens?: number;
+        cacheReadTokens?: number;
+        cacheWriteTokens?: number;
+    }, chatState?: ChatState): void;
     setChatSettings(chatId: number, settings: ChatSettings): void;
     setSessionSettings(sessionId: string, settings: ChatSettings): void;
     private ensureLoaded;

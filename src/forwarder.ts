@@ -46,10 +46,11 @@ export class EventForwarder {
 
       const data = evt.data ?? {};
       const text = extractText(data.message?.content ?? data.content);
-      this.state.addAssistantMessage(chatId, data.usage);
       const chatState = this.state.getChatState(chatId);
       if (chatState) {
-        this.state.setChatState(chatId, { ...chatState, lastActiveAt: Date.now() });
+        this.state.updateAssistantMessageAndChatState(chatId, data.usage, { ...chatState, lastActiveAt: Date.now() });
+      } else {
+        this.state.addAssistantMessage(chatId, data.usage);
       }
       if (!text) {
         // Empty assistant/message usually only carries usage stats.
