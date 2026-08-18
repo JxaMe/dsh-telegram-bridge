@@ -57,7 +57,11 @@ export function registerWebSettings(ctx: DshContext, dataDir: string): void {
           if (req.method === 'POST' && suffix === '/settings') {
             const body = JSON.parse((await readBody(req)) || '{}') as SettingsBody;
             const saved = await saveConfig(dataDir, body);
-            sendJson(res, 200, { ok: true, config: toPublicConfig(saved) });
+            sendJson(res, 200, {
+              ok: true,
+              config: toPublicConfig(saved),
+              warning: '配置已保存，但需要重启 dsh-telegram-bridge 插件才能生效。',
+            });
             return;
           }
           sendJson(res, 404, { error: 'no such endpoint' });

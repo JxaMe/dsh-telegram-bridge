@@ -46,6 +46,8 @@
 
 dsh Web UI 设置页提供 **Telegram Bridge** 独立分区，可在页面中管理连接、默认模型/Preset 与行为选项。
 
+> **注意**：保存配置后需要重启 dsh-telegram-bridge 插件才能生效。
+
 ![dsh-telegram-bridge settings](./set.png)
 
 ## 🔧 工作原理
@@ -100,7 +102,9 @@ dsh --profile web --dump-config | grep dsh-telegram-bridge
 
 ## ⚙️ 配置
 
-配置文件位于 `~/.dsh/dsh-telegram-bridge/config.json`（首次启动自动生成示例）：
+配置文件位于 `~/.dsh/dsh-telegram-bridge/config.json`（首次启动自动生成示例）。
+
+> **注意**：通过 Web 设置面板修改配置后，需要重启 dsh-telegram-bridge 插件才能生效。
 
 ```json
 {
