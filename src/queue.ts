@@ -132,6 +132,7 @@ export class QueueManager {
         const inFlight = this.inFlight.get(chatId) ?? [];
         inFlight.push(item);
         this.inFlight.set(chatId, inFlight);
+        // Only persist after adding to inFlight (before potential async operation)
         this.persistQueues();
         try {
           const settings: ChatSettings = this.state.getChatSettings(chatId);
@@ -159,6 +160,7 @@ export class QueueManager {
             throw new Error(`prompt failed: ${JSON.stringify(res.result.error)}`);
           }
           this.removeFromInFlight(chatId, item);
+          // Only persist after removing from inFlight (state changed)
           this.persistQueues();
         } catch (error) {
           this.removeFromInFlight(chatId, item);
@@ -167,6 +169,7 @@ export class QueueManager {
           map.set(failureId, item);
           this.failedItems.set(chatId, map);
           this.onError?.(chatId, error, failureId);
+          // Only persist after adding to failedItems (state changed)
           this.persistQueues();
         }
       }
